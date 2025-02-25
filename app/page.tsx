@@ -21,9 +21,9 @@ export default function Home() {
   };
 
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-8 sm:p-20">
-      <main className="w-full flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <div className="ml-8">
+    <div className="grid grid-rows-[20px_1fr_20px] min-h-screen p-4 sm:p-8 max-w-full overflow-x-hidden">
+      <main className="w-full max-w-5xl mx-auto flex flex-col gap-8 row-start-2 items-center">
+        <div className="w-full px-4">
           <span className="font-medium">
             Rotation: {angleOfRotation.toFixed(1)}°
           </span>

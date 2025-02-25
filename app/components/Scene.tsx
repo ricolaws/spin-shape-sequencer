@@ -1,11 +1,16 @@
 import React from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls } from "@react-three/drei";
-import DynamicPolygon from "./DynamicPolygon";
+import { Environment, OrbitControls } from "@react-three/drei";
+import DynamicPolygon3D from "./DynamicPolygon3D";
+import {
+  Bloom,
+  ChromaticAberration,
+  EffectComposer,
+} from "@react-three/postprocessing";
 
 interface SceneProps {
-  sides: number; // Number of sides (3-8)
-  angleOfRotation: number; // Rotation angle in degrees (0-360)
+  sides: number;
+  angleOfRotation: number;
   className?: string;
 }
 
@@ -15,20 +20,35 @@ const Scene: React.FC<SceneProps> = ({
   className = "",
 }) => {
   return (
-    <div id="canvas-container" className={`w-11/12 aspect-square ${className}`}>
-      <Canvas camera={{ position: [0, 0, 5], fov: 50 }}>
-        <color attach="background" args={["#111"]} />
-        <ambientLight intensity={0.3} />
-        <pointLight position={[10, 10, 10]} intensity={1} />
-        <gridHelper args={[10, 10]} rotation={[Math.PI / 2, 0, 0]} />
+    <div
+      id="canvas-container"
+      className={`w-11/12 aspect-square mx-auto ${className}`}
+    >
+      <Canvas camera={{ position: [0, 0, 5], fov: 60 }}>
+        <color attach="background" args={["#c1c1c1"]} />
+        <Environment preset="night" environmentIntensity={0.8} />
+        <ambientLight intensity={0.1} />
+        <directionalLight position={[3, 13, 2]} intensity={0.8} />
         <OrbitControls enableZoom={false} />
-
-        <DynamicPolygon
+        <DynamicPolygon3D
           sides={sides}
-          radius={2}
-          color="#4dabf5"
+          outerRadius={2}
+          innerRadius={1.8}
+          height={0.2}
+          color="#dbdbdb"
+          transparent={true}
+          metalness={1.8}
+          roughness={0.5}
           angleOfRotation={angleOfRotation}
         />
+        <EffectComposer>
+          <Bloom
+            intensity={0.12}
+            luminanceThreshold={0.8}
+            luminanceSmoothing={0.8}
+          />
+          <ChromaticAberration opacity={2} />
+        </EffectComposer>
       </Canvas>
     </div>
   );
