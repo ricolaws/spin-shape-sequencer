@@ -11,7 +11,7 @@ interface SceneProps {
 
 const Scene: React.FC<SceneProps> = ({
   sides,
-  angleOfRotation = 0,
+  angleOfRotation,
   className = "",
 }) => {
   return (

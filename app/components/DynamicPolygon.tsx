@@ -13,7 +13,7 @@ const DynamicPolygon: React.FC<DynamicPolygonProps> = ({
   sides,
   radius = 1,
   color = "#1e88e5",
-  angleOfRotation = 0,
+  angleOfRotation,
   position = [0, 0, 0],
 }) => {
   // Validate sides is between 3 and 8

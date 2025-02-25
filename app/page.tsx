@@ -1,29 +1,48 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Scene from "./components/Scene";
 import RNBODevice from "./components/RNBODevice";
 
 export default function Home() {
   const [sides, setSides] = useState(5);
   const [angleOfRotation, setAngleOfRotation] = useState(0);
+  // Add a debugging state to see the last message time
+  const [lastUpdateTime, setLastUpdateTime] = useState("None");
+  // Use a ref to track the last angle value received
+  const lastAngleRef = useRef(0);
 
-  // Simple constant rotation for testing
+  // Handler function that will be passed to the RNBODevice component
+  const handleAngleChange = (angle: number) => {
+    // Store the last angle value in a ref for debugging
+    lastAngleRef.current = angle;
+
+    // Ensure angle is in the range 0-360
+    const normalizedAngle = ((angle % 360) + 360) % 360;
+
+    // Update the state
+    setAngleOfRotation(normalizedAngle);
+
+    // For debugging: update the last time we received a message
+    setLastUpdateTime(
+      new Date().toLocaleTimeString(undefined, {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        fractionalSecondDigits: 3,
+      })
+    );
+  };
+
+  // Debug effect to monitor state changes
   useEffect(() => {
-    const rotationSpeed = 30; // degrees per second
-    const frameRate = 60; // frames per second
-    const rotationPerFrame = rotationSpeed / frameRate;
+    console.log(
+      `AngleOfRotation state updated to: ${angleOfRotation.toFixed(2)}`
+    );
 
-    const rotationInterval = setInterval(() => {
-      setAngleOfRotation((prevAngle) => {
-        // Add rotation and wrap around to stay within 0-360
-        const newAngle = (prevAngle + rotationPerFrame) % 360;
-        return newAngle;
-      });
-    }, 1000 / frameRate);
-
-    return () => clearInterval(rotationInterval);
-  }, []);
+    // Return empty cleanup to avoid creating side effects
+    return () => {};
+  }, [angleOfRotation]);
 
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-8 sm:p-20">
@@ -43,8 +62,12 @@ export default function Home() {
           <span className="font-medium">
             Rotation: {angleOfRotation.toFixed(1)}°
           </span>
+          <div className="text-sm text-gray-500">
+            Last update: {lastUpdateTime} | Last received angle:{" "}
+            {lastAngleRef.current.toFixed(1)}°
+          </div>
         </div>
-        <RNBODevice />
+        <RNBODevice onAngleChange={handleAngleChange} />
         <Scene sides={sides} angleOfRotation={angleOfRotation} />
       </main>
     </div>
