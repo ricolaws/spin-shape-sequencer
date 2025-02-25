@@ -8,9 +8,10 @@ import ParameterSlider from "../ui/ParameterSlider";
 
 interface Props {
   onAngleChange?: (angle: number) => void;
+  onNumCornersChange?: (numCorners: number) => void;
 }
 
-const RNBODevice = ({ onAngleChange }: Props) => {
+const RNBODevice = ({ onAngleChange, onNumCornersChange }: Props) => {
   const [parameters, setParameters] = useState<Parameter[]>([]);
   const [, setIsLoaded] = useState(false);
   const [deviceStatus, setDeviceStatus] = useState("Initializing...");
@@ -19,40 +20,38 @@ const RNBODevice = ({ onAngleChange }: Props) => {
   );
 
   useEffect(() => {
-    // Main setup function for this component instance
     async function setup() {
       try {
-        // Get or create the global device
         const device = await getOrCreateDevice(setDeviceStatus);
         if (!device) {
           setDeviceStatus("Failed to create RNBO device");
           return;
         }
 
-        // Update parameters state
+        // Initialize numCorners value
+        if (onNumCornersChange) {
+          const numCornersParam = device.parameters.find(
+            (p) => p.name === "numCorners"
+          );
+          if (numCornersParam) {
+            onNumCornersChange(Math.round(numCornersParam.value));
+          }
+        }
+
         setParameters(device.parameters);
         setIsLoaded(true);
         setDeviceStatus("Ready - Click anywhere to start audio");
 
-        // Subscribe to message events
+        // Subscribe to angle messages
         if (onAngleChange) {
-          // Clean up previous subscription if it exists
           if (messageSubscriptionRef.current) {
             messageSubscriptionRef.current.unsubscribe();
           }
 
-          // Create new subscription
           messageSubscriptionRef.current = device.messageEvent.subscribe(
             (ev) => {
               if (ev.tag === "angle") {
-                // Check if the value is a number or in an array
-                const angleValue = Array.isArray(ev.payload)
-                  ? ev.payload[0]
-                  : ev.payload;
-
-                if (typeof angleValue === "number") {
-                  onAngleChange(angleValue);
-                }
+                onAngleChange(ev.payload);
               }
             }
           );
@@ -67,29 +66,64 @@ const RNBODevice = ({ onAngleChange }: Props) => {
 
     setup();
 
-    // Component cleanup
     return () => {
-      // Only unsubscribe from messages, don't destroy the device
       if (messageSubscriptionRef.current) {
         messageSubscriptionRef.current.unsubscribe();
         messageSubscriptionRef.current = null;
       }
     };
-  }, [onAngleChange]); // Only re-run if onAngleChange changes
+  }, [onAngleChange, onNumCornersChange]);
 
   const handleParameterChange = async (paramId: string, value: number) => {
     try {
       const device = await getOrCreateDevice(setDeviceStatus);
       if (!device) return;
 
-      // Find the parameter and update its value
-      const param = device.parameters.find((p: Parameter) => p.id === paramId);
+      const param = device.parameters.find((p) => p.id === paramId);
       if (param) {
+        // Round to integer for all parameters except speed
+        if (param.name !== "speed") {
+          value = Math.round(value);
+        }
+
         param.value = value;
+
+        // Propagate numCorners changes to the Scene component
+        if (param.name === "numCorners" && onNumCornersChange) {
+          onNumCornersChange(Math.round(value));
+        }
       }
     } catch (err) {
       console.error("Error changing parameter:", err);
     }
+  };
+
+  // Custom renderer for specific parameters
+  const renderParameter = (param: Parameter) => {
+    if (param.name !== "speed") {
+      // Create a modified parameter that enforces integer values
+      const integerParam: Parameter = {
+        ...param,
+        value: Math.round(param.value),
+        steps: param.max - param.min + 1,
+      };
+
+      return (
+        <ParameterSlider
+          key={param.id}
+          param={integerParam}
+          onChange={(id, value) => handleParameterChange(id, Math.round(value))}
+        />
+      );
+    }
+
+    return (
+      <ParameterSlider
+        key={param.id}
+        param={param}
+        onChange={handleParameterChange}
+      />
+    );
   };
 
   return (
@@ -97,7 +131,6 @@ const RNBODevice = ({ onAngleChange }: Props) => {
       <h2 className="text-xl font-semibold mb-2">RNBO Device</h2>
       <p className="text-sm text-gray-300 mb-4">{deviceStatus}</p>
 
-      {/* Master Volume Control */}
       <VolumeControl />
 
       <div className="space-y-4">
@@ -105,15 +138,7 @@ const RNBODevice = ({ onAngleChange }: Props) => {
         {parameters.length === 0 ? (
           <em className="text-gray-400">No parameters available</em>
         ) : (
-          <div className="space-y-3">
-            {parameters.map((param) => (
-              <ParameterSlider
-                key={param.id}
-                param={param}
-                onChange={handleParameterChange}
-              />
-            ))}
-          </div>
+          <div className="space-y-3">{parameters.map(renderParameter)}</div>
         )}
       </div>
     </div>
