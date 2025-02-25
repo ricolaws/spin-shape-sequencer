@@ -6,7 +6,7 @@ import DynamicPolygon from "./DynamicPolygon";
 interface SceneProps {
   sides: number; // Number of sides (3-8)
   angleOfRotation: number; // Rotation angle in degrees (0-360)
-  className?: string; // Optional CSS class for the container
+  className?: string;
 }
 
 const Scene: React.FC<SceneProps> = ({
@@ -23,7 +23,6 @@ const Scene: React.FC<SceneProps> = ({
         <gridHelper args={[10, 10]} rotation={[Math.PI / 2, 0, 0]} />
         <OrbitControls enableZoom={false} />
 
-        {/* Polygon with externally controlled sides and rotation */}
         <DynamicPolygon
           sides={sides}
           radius={2}

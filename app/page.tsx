@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import Scene from "./components/Scene";
-import RNBODevice from "./components/RNBODevice";
+import RNBODevice from "./components/audio/RNBODevice";
 
 export default function Home() {
   const [sides, setSides] = useState(5);
