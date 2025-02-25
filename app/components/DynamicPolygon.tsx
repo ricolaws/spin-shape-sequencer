@@ -25,7 +25,6 @@ const DynamicPolygon: React.FC<DynamicPolygonProps> = ({
     const shape = new THREE.Shape();
     const angleStep = (Math.PI * 2) / validSides;
 
-    // Start at the rightmost point
     shape.moveTo(radius, 0);
 
     // Draw the polygon by calculating points around a circle
