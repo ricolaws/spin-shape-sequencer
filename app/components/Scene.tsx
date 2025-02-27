@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Environment, OrbitControls } from "@react-three/drei";
 import DynamicPolygon3D from "./DynamicPolygon3D";
@@ -7,6 +7,7 @@ import {
   ChromaticAberration,
   EffectComposer,
 } from "@react-three/postprocessing";
+import SeqRing, { RingRef } from "./SeqRing";
 
 interface SceneProps {
   sides: number;
@@ -19,6 +20,18 @@ const Scene: React.FC<SceneProps> = ({
   angleOfRotation,
   className = "",
 }) => {
+  const ringRef = useRef<RingRef>(null);
+
+  // Dummy data for initialization
+  const dummyNoteValues = [60, 62, 64, 65, 67, 69, 71, 72]; // C major scale
+  const dummyActiveEvents = [true, true, true, true, true, false, true, false];
+
+  // Handle event toggling - connect to your RNBO device
+  const handleEventToggle = (index: number, active: boolean) => {
+    console.log(`Event ${index} ${active ? "activated" : "deactivated"}`);
+    // Here you would send a message to your RNBO device to update state
+  };
+
   return (
     <div
       id="canvas-container"
@@ -40,6 +53,18 @@ const Scene: React.FC<SceneProps> = ({
           metalness={1.8}
           roughness={0.5}
           angleOfRotation={angleOfRotation}
+        />
+        <SeqRing
+          ref={ringRef}
+          radius={2.1}
+          eventCount={8}
+          noteValues={dummyNoteValues}
+          initialActiveEvents={dummyActiveEvents}
+          onEventToggle={handleEventToggle}
+          color="#ffffff"
+          activeColor="#ff4500"
+          inactiveColor="#555555"
+          markerSize={0.15}
         />
         <EffectComposer>
           <Bloom
