@@ -3,13 +3,13 @@ import { useFrame } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import { Event } from "./Event";
+import { ThreeEvent } from "@react-three/fiber";
 
 interface EventMarkerProps {
   event: Event;
   size?: number;
   activeColor?: string;
   inactiveColor?: string;
-  hoverColor?: string;
   triggerColor?: string;
   onEventClick?: (index: number) => void;
   onEventHover?: (index: number, hovered: boolean) => void;
@@ -18,9 +18,8 @@ interface EventMarkerProps {
 const EventMarker: React.FC<EventMarkerProps> = ({
   event,
   size = 0.2,
-  activeColor = "#ff0000",
-  inactiveColor = "#555555",
-  hoverColor = "#ffffff",
+  activeColor = "#ffffff",
+  inactiveColor = "#666666",
   triggerColor = "#ffaa00",
   onEventClick,
   onEventHover,
@@ -28,6 +27,12 @@ const EventMarker: React.FC<EventMarkerProps> = ({
   const markerRef = useRef<THREE.Mesh>(null);
   const triggerRef = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
+  const [localActive, setLocalActive] = useState(event.active);
+
+  // Sync local active state with event object
+  useEffect(() => {
+    setLocalActive(event.active);
+  }, [event.active]);
 
   // Handle hovering
   useEffect(() => {
@@ -54,16 +59,37 @@ const EventMarker: React.FC<EventMarkerProps> = ({
     }
   });
 
-  const handleClick = () => {
+  const handleClick = (e: ThreeEvent<MouseEvent>) => {
+    e.stopPropagation(); // Prevent click from propagating
+
+    // Update local state immediately for visual feedback
+    setLocalActive(!localActive);
+
+    // Call the parent handler to update the actual event
     if (onEventClick) {
       onEventClick(event.index);
     }
+
+    // Log for debugging
+    console.log(
+      `Clicked event ${
+        event.index
+      }, new active state should be: ${!localActive}`
+    );
   };
 
   const getColor = () => {
-    if (!event.active) return inactiveColor;
-    if (hovered) return hoverColor;
+    if (!localActive) return inactiveColor;
     return activeColor;
+  };
+
+  // Get text color based on active state
+  const getTextColor = () => {
+    if (localActive) {
+      return "#000000"; // Black text for active events
+    } else {
+      return "#ffffff"; // White text for inactive events
+    }
   };
 
   return (
@@ -98,7 +124,7 @@ const EventMarker: React.FC<EventMarkerProps> = ({
       <Text
         position={[0, 0, 0.01]} // Slightly in front of the circle
         fontSize={size * 0.8}
-        color="#ffffff"
+        color={getTextColor()}
         anchorX="center"
         anchorY="middle"
       >
@@ -109,7 +135,7 @@ const EventMarker: React.FC<EventMarkerProps> = ({
       {hovered && (
         <mesh position={[0, 0, 0.005]}>
           <ringGeometry args={[size * 1.1, size * 1.2, 32]} />
-          <meshBasicMaterial color={hoverColor} />
+          <meshBasicMaterial color={activeColor} />
         </mesh>
       )}
     </group>

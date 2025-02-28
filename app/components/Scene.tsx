@@ -62,8 +62,8 @@ const Scene: React.FC<SceneProps> = ({
           initialActiveEvents={dummyActiveEvents}
           onEventToggle={handleEventToggle}
           color="#ffffff"
-          activeColor="#ff4500"
-          inactiveColor="#555555"
+          activeColor="#ffffff"
+          inactiveColor="#666666"
           markerSize={0.15}
         />
         <EffectComposer>

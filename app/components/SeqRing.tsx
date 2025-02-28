@@ -51,11 +51,10 @@ const SeqRing = forwardRef<RingRef, SeqRingProps>(
       eventCount = 8,
       segments = 64,
       color = "#ffffff",
-      lineWidth = 1,
+      lineWidth = 2,
       markerSize = 0.2,
-      activeColor = "#ff0000",
-      inactiveColor = "#555555",
-      hoverColor = "#ffffff",
+      activeColor = "#ffffff",
+      inactiveColor = "#666666",
       triggerColor = "#ffaa00",
       noteValues = [],
       initialActiveEvents = [],
@@ -96,11 +95,19 @@ const SeqRing = forwardRef<RingRef, SeqRingProps>(
 
     // Handle event click
     const handleEventClick = (index: number) => {
-      setEvents((prevEvents) => {
-        const newEvents = [...prevEvents];
-        const event = newEvents[index];
-        event.toggle();
+      console.log(`SeqRing received click for event ${index}`);
 
+      setEvents((prevEvents) => {
+        // Create a deep copy of the events array
+        const newEvents = [...prevEvents];
+
+        // Get the event and toggle its state
+        const event = newEvents[index];
+        event.active = !event.active;
+
+        console.log(`Event ${index} active state toggled to: ${event.active}`);
+
+        // Call callback if provided
         if (onEventToggle) {
           onEventToggle(index, event.active);
         }
@@ -153,7 +160,6 @@ const SeqRing = forwardRef<RingRef, SeqRingProps>(
             size={markerSize}
             activeColor={activeColor}
             inactiveColor={inactiveColor}
-            hoverColor={hoverColor}
             triggerColor={triggerColor}
             onEventClick={handleEventClick}
           />
