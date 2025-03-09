@@ -1,5 +1,17 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import { MessageEvent, TimeNow } from "@rnbo/js";
+import { Event } from "../components/Event"; // Import the Event class
+
+// Define the trigger listener interface
+interface TriggerListener {
+  onTrigger: (index: number) => void;
+}
 
 // Define types for our sequencer state
 interface NoteData {
@@ -12,14 +24,17 @@ interface SequencerState {
     notes: NoteData[];
     active: boolean[];
   };
+  visualEvents: Event[]; // Add array of Event objects for visual representation
 }
 
-// Create context
+// Create context with updated type definition
 const SequencerContext = createContext<{
   state: SequencerState;
   toggleEvent: (index: number) => void;
   setNote: (index: number, note: NoteData) => void;
   setRnboDevice: React.Dispatch<any>;
+  triggerEvent: (index: number) => void; // Add method for triggering events
+  registerTriggerListener: (listener: TriggerListener) => () => void; // Add listener registration
 }>(null!);
 
 // Hook for using the sequencer context
@@ -29,46 +44,64 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [rnboDevice, setRnboDevice] = useState<any>(null);
+  const [triggerListeners, setTriggerListeners] = useState<TriggerListener[]>(
+    []
+  );
+
   // Initial state with dummy data
-  const [state, setState] = useState<SequencerState>({
-    events: {
-      notes: [
-        { pitch: 60, velocity: 100 }, // C4
-        { pitch: 62, velocity: 80 }, // D4
-        { pitch: 64, velocity: 100 }, // E4
-        { pitch: 65, velocity: 80 }, // F4
-        { pitch: 67, velocity: 100 }, // G4
-        { pitch: 69, velocity: 80 }, // A4
-        { pitch: 71, velocity: 100 }, // B4
-        { pitch: 72, velocity: 80 }, // C5
-        { pitch: 60, velocity: 100 }, // C4
-        { pitch: 62, velocity: 80 }, // D4
-        { pitch: 64, velocity: 100 }, // E4
-        { pitch: 65, velocity: 80 }, // F4
-        { pitch: 67, velocity: 100 }, // G4
-        { pitch: 69, velocity: 80 }, // A4
-        { pitch: 71, velocity: 100 }, // B4
-        { pitch: 72, velocity: 80 }, // C5
-      ],
-      active: [
-        true,
-        true,
-        true,
-        false,
-        true,
-        false,
-        true,
-        false,
-        true,
-        true,
-        true,
-        true,
-        true,
-        false,
-        true,
-        true,
-      ],
-    },
+  const [state, setState] = useState<SequencerState>(() => {
+    // Initial note and active data
+    const initialNotes = [
+      { pitch: 55, velocity: 110 },
+      { pitch: 62, velocity: 80 },
+      { pitch: 60, velocity: 100 },
+      { pitch: 65, velocity: 80 },
+      { pitch: 67, velocity: 100 },
+      { pitch: 69, velocity: 80 },
+      { pitch: 71, velocity: 100 },
+      { pitch: 72, velocity: 99 },
+      { pitch: 60, velocity: 100 },
+      { pitch: 62, velocity: 80 },
+      { pitch: 64, velocity: 100 },
+      { pitch: 65, velocity: 80 },
+      { pitch: 67, velocity: 100 },
+      { pitch: 69, velocity: 80 },
+      { pitch: 71, velocity: 100 },
+      { pitch: 72, velocity: 80 },
+    ];
+
+    const initialActive = [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+    ];
+
+    // Create visual Event objects based on initial data
+    const visualEvents = initialNotes.map((note, index) => {
+      const event = new Event(index, note.pitch, initialActive[index]);
+      return event;
+    });
+
+    return {
+      events: {
+        notes: initialNotes,
+        active: initialActive,
+      },
+      visualEvents: visualEvents,
+    };
   });
 
   // Sync to RNBO when component mounts
@@ -77,7 +110,7 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
 
     // Send initial data to RNBO
     syncToRNBO(state, rnboDevice);
-  }, [rnboDevice]); // Only run when RNBO device is available
+  }, [rnboDevice, state]); // Only run when RNBO device is available
 
   // Function to sync state to RNBO
   const syncToRNBO = (state: SequencerState, device: any) => {
@@ -103,53 +136,18 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   };
 
-  //   const syncToRNBO = (state: SequencerState, device: any) => {
-  //     if (!device) return;
+  // Register a trigger listener (using useCallback to maintain stability)
+  const registerTriggerListener = React.useCallback(
+    (listener: TriggerListener) => {
+      setTriggerListeners((prev) => [...prev, listener]);
 
-  //     try {
-  //       // Instead of using MessageEvent and scheduleEvent, use a method
-  //       // that's more likely to be supported by your RNBO implementation
-
-  //       // Option 1: Use setParameterValue if available
-  //       state.events.notes.forEach((note, index) => {
-  //         if (typeof device.setParameterValue === "function") {
-  //           try {
-  //             device.setParameterValue(`note_${index}_pitch`, note.pitch);
-  //             device.setParameterValue(`note_${index}_velocity`, note.velocity);
-  //           } catch (err) {
-  //             console.error(`Error setting parameter for note ${index}:`, err);
-  //           }
-  //         }
-  //       });
-
-  //       // Option 2: Try using a sendEvent method if it exists
-  //       if (typeof device.sendEvent === "function") {
-  //         state.events.notes.forEach((note, index) => {
-  //           try {
-  //             device.sendEvent("update_note", [index, note.pitch, note.velocity]);
-  //           } catch (err) {
-  //             console.error(`Error sending event for note ${index}:`, err);
-  //           }
-  //         });
-  //       }
-
-  //       // Option 3: Try using any outport methods from your device
-  //       if (
-  //         device.outports &&
-  //         typeof device.outports.update_note === "function"
-  //       ) {
-  //         state.events.notes.forEach((note, index) => {
-  //           try {
-  //             device.outports.update_note(index, note.pitch, note.velocity);
-  //           } catch (err) {
-  //             console.error(`Error using outport for note ${index}:`, err);
-  //           }
-  //         });
-  //       }
-  //     } catch (error) {
-  //       console.error("Error syncing to RNBO:", error);
-  //     }
-  //   };
+      // Return a function to unregister
+      return () => {
+        setTriggerListeners((prev) => prev.filter((l) => l !== listener));
+      };
+    },
+    []
+  );
 
   // Toggle event active state
   const toggleEvent = (index: number) => {
@@ -160,12 +158,19 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
       const newActive = [...prev.events.active];
       newActive[index] = !newActive[index];
 
+      // Update the visual Event object
+      const newVisualEvents = [...prev.visualEvents];
+      if (newVisualEvents[index]) {
+        newVisualEvents[index].setActive(!prev.events.active[index]);
+      }
+
       const newState = {
         ...prev,
         events: {
           ...prev.events,
           active: newActive,
         },
+        visualEvents: newVisualEvents,
       };
 
       // Send update to RNBO
@@ -190,12 +195,19 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
       const newNotes = [...prev.events.notes];
       newNotes[index] = { ...note };
 
+      // Update the visual Event object's note value
+      const newVisualEvents = [...prev.visualEvents];
+      if (newVisualEvents[index]) {
+        newVisualEvents[index].noteValue = note.pitch;
+      }
+
       const newState = {
         ...prev,
         events: {
           ...prev.events,
           notes: newNotes,
         },
+        visualEvents: newVisualEvents,
       };
 
       // Send update to RNBO
@@ -213,14 +225,53 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   };
 
-  // Return setRnboDevice in the context value
+  // Trigger visual event and notify listeners (using useCallback)
+  const triggerEvent = useCallback(
+    (index: number) => {
+      if (index < 0 || index >= state.visualEvents.length) return;
+
+      // First update our internal state
+      setState((prev) => {
+        // Only update if the event is active
+        if (prev.events.active[index]) {
+          const newVisualEvents = [...prev.visualEvents];
+          if (newVisualEvents[index]) {
+            // Call the trigger method on the Event object
+            newVisualEvents[index].trigger();
+
+            // console.log(`Event ${index} triggered in SequencerProvider`);
+          }
+
+          return {
+            ...prev,
+            visualEvents: newVisualEvents,
+          };
+        }
+        return prev;
+      });
+
+      // Then notify all registered listeners
+      triggerListeners.forEach((listener) => {
+        try {
+          listener.onTrigger(index);
+        } catch (err) {
+          console.error("Error in trigger listener:", err);
+        }
+      });
+    },
+    [state.visualEvents, state.events.active, triggerListeners]
+  );
+
+  // Return context with added functions
   return (
     <SequencerContext.Provider
       value={{
         state,
         toggleEvent,
         setNote,
-        setRnboDevice, // Expose this to let components set the device
+        setRnboDevice,
+        triggerEvent,
+        registerTriggerListener,
       }}
     >
       {children}

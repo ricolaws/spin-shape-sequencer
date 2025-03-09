@@ -25,25 +25,37 @@ export class Event {
 
   setActive(value: boolean): void {
     this.active = value;
+    console.log(`Event ${this.index}: Active state set to ${value}`);
     // In a real implementation, this would send a message to the RNBO device
     // e.g., sendMessageToRNBO(this.index, value ? 1 : 0);
   }
 
   trigger(): boolean {
     if (this.active) {
+      console.log(
+        `Event ${this.index}: Triggering (already triggered: ${this.triggered})`
+      );
       this.triggered = true;
       this.triggerOpacity = 1;
       return true;
     }
+    console.log(
+      `Event ${this.index}: Trigger attempted but event is not active`
+    );
     return false;
   }
 
   endTrigger(): void {
+    console.log(`Event ${this.index}: End trigger called`);
     this.triggered = false;
     this.triggerOpacity = 0;
   }
 
   toggle(): void {
+    console.log(
+      `Event ${this.index}: Toggling active state from ${this.active} to ${!this
+        .active}`
+    );
     this.setActive(!this.active);
   }
 

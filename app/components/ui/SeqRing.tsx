@@ -66,14 +66,66 @@ const SeqRing = forwardRef<RingRef, SeqRingProps>(
     const [events, setEvents] = useState<Event[]>([]);
     const groupRef = useRef<THREE.Group>(null);
     const geometryRef = useRef<THREE.BufferGeometry | null>(null);
+    const lastPropsRef = useRef({
+      eventCount,
+      radius,
+      noteValues: noteValues.join(","),
+      initialActiveEvents: initialActiveEvents.join(","),
+    });
+    const initCalledRef = useRef(false);
 
-    // Create circle geometry on mount or when parameters change
+    // Create circle geometry only once or when radius/segments change
     useEffect(() => {
-      geometryRef.current = createCircleGeometry(radius, segments);
+      if (!geometryRef.current) {
+        console.log("Creating circle geometry");
+        geometryRef.current = createCircleGeometry(radius, segments);
+      } else if (lastPropsRef.current.radius !== radius) {
+        console.log("Updating circle geometry due to radius change");
+        geometryRef.current = createCircleGeometry(radius, segments);
+        lastPropsRef.current.radius = radius;
+      }
     }, [radius, segments]);
 
-    // Initialize events
+    // Check if we need to reinitialize events
+    const shouldReinitialize = () => {
+      if (!initCalledRef.current) {
+        initCalledRef.current = true;
+        return true;
+      }
+
+      const currentProps = {
+        eventCount,
+        radius,
+        noteValues: noteValues.join(","),
+        initialActiveEvents: initialActiveEvents.join(","),
+      };
+
+      // Deep compare relevant props
+      const needsUpdate =
+        lastPropsRef.current.eventCount !== currentProps.eventCount ||
+        lastPropsRef.current.noteValues !== currentProps.noteValues ||
+        lastPropsRef.current.initialActiveEvents !==
+          currentProps.initialActiveEvents;
+
+      if (needsUpdate) {
+        console.log("Props changed, reinitializing events");
+        lastPropsRef.current = { ...currentProps };
+      }
+
+      return needsUpdate;
+    };
+
+    // Initialize events ONLY when necessary
     useEffect(() => {
+      if (!shouldReinitialize()) {
+        console.log("Skipping events initialization - no changes detected");
+        return;
+      }
+
+      console.log(
+        `SeqRing: Initializing events. Count: ${eventCount}, Notes: ${noteValues.length}, Active: ${initialActiveEvents.length}`
+      );
+
       const newEvents: Event[] = [];
 
       for (let i = 0; i < eventCount; i++) {
@@ -90,6 +142,7 @@ const SeqRing = forwardRef<RingRef, SeqRingProps>(
         newEvents.push(event);
       }
 
+      console.log(`SeqRing: ${newEvents.length} events created`);
       setEvents(newEvents);
     }, [eventCount, radius, noteValues, initialActiveEvents]);
 
@@ -118,24 +171,34 @@ const SeqRing = forwardRef<RingRef, SeqRingProps>(
 
     // Public method to trigger an event (to be called from parent)
     const triggerEvent = (index: number) => {
+      console.log(`SeqRing.triggerEvent called for index: ${index}`);
+
       if (index >= 0 && index < events.length) {
+        console.log(
+          `SeqRing: Triggering event ${index}, active: ${events[index].active}`
+        );
+
         setEvents((prevEvents) => {
           const newEvents = [...prevEvents];
-          newEvents[index].trigger();
+          const didTrigger = newEvents[index].trigger();
+          console.log(`SeqRing: Event ${index} trigger result: ${didTrigger}`);
           return newEvents;
         });
+      } else {
+        console.warn(
+          `SeqRing: Invalid event index ${index} (events length: ${events.length})`
+        );
       }
     };
 
     // Expose the triggerEvent method to parent components
-    useImperativeHandle(ref, () => ({
-      triggerEvent,
-    }));
-
-    // Create the geometry only if not already created
-    if (!geometryRef.current) {
-      geometryRef.current = createCircleGeometry(radius, segments);
-    }
+    useImperativeHandle(
+      ref,
+      () => ({
+        triggerEvent,
+      }),
+      [events]
+    ); // Important: depend on events array
 
     return (
       <group ref={groupRef}>

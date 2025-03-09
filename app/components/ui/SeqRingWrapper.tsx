@@ -19,27 +19,67 @@ const SeqRingWrapper: React.FC<SeqRingWrapperProps> = ({
   inactiveColor = "#555555",
   triggerColor = "#ffaa00",
 }) => {
-  const { state, toggleEvent } = useSequencer();
+  const { state, toggleEvent, registerTriggerListener } = useSequencer();
   const ringRef = useRef<RingRef>(null);
 
-  // Set up listeners for RNBO trigger messages
+  // Store ringRef in a global variable for access by RNBO
   useEffect(() => {
-    const handleStepTrigger = (step: number) => {
-      console.log(`RNBO triggered step ${step}`);
-      if (ringRef.current) {
-        ringRef.current.triggerEvent(step);
-      }
-    };
+    // @ts-ignore - Adding ringRef to window for global access
+    window.globalRingRef = ringRef;
 
-    // You would set up your actual RNBO message listener here
-    // This is just a placeholder
-    const cleanup = () => {
-      // Clean up any listeners
+    return () => {
+      // @ts-ignore - Clean up on unmount
+      delete window.globalRingRef;
     };
-
-    return cleanup;
   }, []);
 
+  // Register as a trigger listener
+  useEffect(() => {
+    // Only if registerTriggerListener exists
+    if (!registerTriggerListener) {
+      console.warn("registerTriggerListener is not available");
+      return;
+    }
+
+    // Only log once when first registering
+    console.log("SeqRingWrapper: Registering as trigger listener");
+
+    // Create a stable listener object that doesn't change on re-renders
+    const listener = {
+      onTrigger: (index: number) => {
+        console.log(`SeqRingWrapper received trigger for event ${index}`);
+        if (ringRef.current) {
+          ringRef.current.triggerEvent(index);
+        }
+      },
+    };
+
+    const unregister = registerTriggerListener(listener);
+
+    // Clean up on unmount
+    return unregister;
+  }, [registerTriggerListener]);
+
+  // For testing: add a periodic trigger to verify animations work
+  useEffect(() => {
+    // Set up a periodic test trigger
+    const interval = setInterval(() => {
+      if (ringRef.current) {
+        const randomIndex = Math.floor(
+          Math.random() * (state.events.notes.length || 8)
+        );
+        console.log(
+          `TEST: Automated periodic test trigger for event ${randomIndex}`
+        );
+        ringRef.current.triggerEvent(randomIndex);
+      }
+    }, 5000); // Every 5 seconds
+
+    // Clear on unmount
+    return () => clearInterval(interval);
+  }, [state.events.notes.length]);
+
+  // Only render the SeqRing component inside the Canvas
   return (
     <SeqRing
       ref={ringRef}

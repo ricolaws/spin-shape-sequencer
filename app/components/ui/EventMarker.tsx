@@ -28,6 +28,19 @@ const EventMarker: React.FC<EventMarkerProps> = ({
   const triggerRef = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
   const [localActive, setLocalActive] = useState(event.active);
+  const [debugTriggered, setDebugTriggered] = useState(false);
+
+  // Debug logging for event properties
+  useEffect(() => {
+    if (event.triggered && !debugTriggered) {
+      console.log(
+        `EventMarker ${event.index}: Event triggered with opacity ${event.triggerOpacity}`
+      );
+      setDebugTriggered(true);
+    } else if (!event.triggered && debugTriggered) {
+      setDebugTriggered(false);
+    }
+  }, [event.triggered, event.triggerOpacity, event.index, debugTriggered]);
 
   // Sync local active state with event object
   useEffect(() => {
@@ -45,6 +58,13 @@ const EventMarker: React.FC<EventMarkerProps> = ({
   // Animation frame update
   useFrame(() => {
     if (event.triggered && triggerRef.current) {
+      // Debug visualization state
+      if (triggerRef.current.scale.x !== 1 + event.triggerOpacity * 0.5) {
+        console.log(
+          `EventMarker ${event.index}: Animating with opacity ${event.triggerOpacity}`
+        );
+      }
+
       // For triggered animation pulse
       triggerRef.current.scale.x = 1 + event.triggerOpacity * 0.5;
       triggerRef.current.scale.y = 1 + event.triggerOpacity * 0.5;
@@ -53,8 +73,17 @@ const EventMarker: React.FC<EventMarkerProps> = ({
       // Fade out trigger effect
       if (event.triggerOpacity > 0) {
         event.triggerOpacity -= 0.02;
+        // Debug log when fading out
+        if (Math.round(event.triggerOpacity * 100) % 10 === 0) {
+          console.log(
+            `EventMarker ${
+              event.index
+            }: Fading opacity: ${event.triggerOpacity.toFixed(2)}`
+          );
+        }
       } else {
         event.endTrigger();
+        console.log(`EventMarker ${event.index}: Trigger ended`);
       }
     }
   });

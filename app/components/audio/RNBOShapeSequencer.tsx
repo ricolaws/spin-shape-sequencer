@@ -12,7 +12,8 @@ interface Props {
 }
 
 const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
-  const { state, toggleEvent, setNote, setRnboDevice } = useSequencer();
+  const { state, toggleEvent, setNote, setRnboDevice, triggerEvent } =
+    useSequencer();
   const [parameters, setParameters] = useState<Parameter[]>([]);
   const [, setIsLoaded] = useState(false);
   const [deviceStatus, setDeviceStatus] = useState("Initializing...");
@@ -44,20 +45,46 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
         setIsLoaded(true);
         setDeviceStatus("Ready - Click anywhere to start audio");
 
-        // Subscribe to angle messages
-        if (onAngleChange) {
-          if (messageSubscriptionRef.current) {
-            messageSubscriptionRef.current.unsubscribe();
-          }
-
-          messageSubscriptionRef.current = device.messageEvent.subscribe(
-            (ev) => {
-              if (ev.tag === "angle") {
-                onAngleChange(ev.payload);
-              }
-            }
-          );
+        // Subscribe to messages from RNBO device
+        if (messageSubscriptionRef.current) {
+          messageSubscriptionRef.current.unsubscribe();
         }
+
+        messageSubscriptionRef.current = device.messageEvent.subscribe((ev) => {
+          console.log("RNBO message received:", ev.tag, ev.payload);
+
+          // Handle angle messages
+          if (ev.tag === "angle") {
+            if (onAngleChange) onAngleChange(ev.payload);
+          }
+          // Handle trigger messages from RNBO
+          else if (ev.tag === "trigger") {
+            // The payload should contain the index of the triggered event
+            const eventIndex = ev.payload;
+
+            console.log(
+              `RNBO trigger message received for event ${eventIndex}`
+            );
+
+            // Try multiple approaches to ensure triggering works
+
+            // 1. Use the context triggerEvent function
+            if (typeof triggerEvent === "function") {
+              console.log(`Calling triggerEvent(${eventIndex}) from context`);
+              triggerEvent(eventIndex);
+            }
+
+            // 2. Try accessing the global ring reference
+            // @ts-ignore - Access the global ring reference
+            if (window.globalRingRef && window.globalRingRef.current) {
+              console.log(
+                `Calling globalRingRef.current.triggerEvent(${eventIndex})`
+              );
+              // @ts-ignore
+              window.globalRingRef.current.triggerEvent(eventIndex);
+            }
+          }
+        });
       } catch (err) {
         console.error("Error in component setup:", err);
         setDeviceStatus(
@@ -74,7 +101,24 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
         messageSubscriptionRef.current = null;
       }
     };
-  }, [onAngleChange, onNumCornersChange]);
+  }, [onAngleChange, onNumCornersChange, setRnboDevice, triggerEvent]);
+
+  // Add manual test trigger button
+  const handleTestTrigger = () => {
+    const randomEventIndex = Math.floor(Math.random() * 8);
+    console.log(`Manual test: Triggering event ${randomEventIndex}`);
+
+    // Try both approaches
+    if (typeof triggerEvent === "function") {
+      triggerEvent(randomEventIndex);
+    }
+
+    // @ts-ignore - Access the global ring reference
+    if (window.globalRingRef && window.globalRingRef.current) {
+      // @ts-ignore
+      window.globalRingRef.current.triggerEvent(randomEventIndex);
+    }
+  };
 
   const handleParameterChange = async (paramId: string, value: number) => {
     try {
@@ -134,6 +178,14 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
       <p className="text-sm text-gray-300 mb-4">{deviceStatus}</p>
 
       <VolumeControl />
+
+      {/* Test trigger button */}
+      <button
+        className="mb-4 px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
+        onClick={handleTestTrigger}
+      >
+        Test Trigger
+      </button>
 
       <div className="space-y-4">
         <h3 className="font-medium">Parameters</h3>
