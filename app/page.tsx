@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Scene from "./components/Scene";
-import RNBODevice from "./components/audio/RNBODevice";
+import RNBOShapeSequencer from "./components/audio/RNBOShapeSequencer";
+import { SequencerProvider } from "./context/SequencerProvider";
 
 export default function Home() {
   const [sides, setSides] = useState(5);
@@ -15,7 +16,6 @@ export default function Home() {
 
   // Handler function for number of sides changes
   const handleSidesChange = (value: number) => {
-    // Ensure the value is an integer
     const intValue = Math.round(value);
     setSides(intValue);
   };
@@ -28,11 +28,14 @@ export default function Home() {
             Rotation: {angleOfRotation.toFixed(1)}°
           </span>
         </div>
-        <RNBODevice
-          onAngleChange={handleAngleChange}
-          onNumCornersChange={handleSidesChange}
-        />
-        <Scene sides={sides} angleOfRotation={angleOfRotation} />
+
+        <SequencerProvider>
+          <RNBOShapeSequencer
+            onAngleChange={handleAngleChange}
+            onNumCornersChange={handleSidesChange}
+          />
+          <Scene sides={sides} angleOfRotation={angleOfRotation} />
+        </SequencerProvider>
       </main>
     </div>
   );

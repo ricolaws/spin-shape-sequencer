@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
 import * as THREE from "three";
-import { Event } from "./Event";
+import { Event } from "../Event";
 import { ThreeEvent } from "@react-three/fiber";
 
 interface EventMarkerProps {

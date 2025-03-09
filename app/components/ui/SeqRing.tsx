@@ -7,7 +7,7 @@ import React, {
 } from "react";
 import * as THREE from "three";
 import EventMarker from "./EventMarker";
-import { Event } from "./Event";
+import { Event } from "../Event";
 
 interface SeqRingProps {
   radius?: number;

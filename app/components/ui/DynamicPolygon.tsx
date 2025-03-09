@@ -1,7 +1,7 @@
 import React, { useRef, useMemo, useEffect } from "react";
 import * as THREE from "three";
 
-interface DynamicPolygon3DProps {
+interface DynamicPolygonProps {
   sides: number;
   outerRadius?: number;
   innerRadius?: number;
@@ -14,7 +14,7 @@ interface DynamicPolygon3DProps {
   roughness?: number;
 }
 
-const DynamicPolygon3D: React.FC<DynamicPolygon3DProps> = ({
+const DynamicPolygon: React.FC<DynamicPolygonProps> = ({
   sides,
   outerRadius = 1,
   innerRadius = 0.8,
@@ -114,4 +114,4 @@ const DynamicPolygon3D: React.FC<DynamicPolygon3DProps> = ({
   );
 };
 
-export default DynamicPolygon3D;
+export default DynamicPolygon;

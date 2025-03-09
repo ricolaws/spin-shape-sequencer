@@ -1,17 +1,18 @@
 "use client";
-
 import { useEffect, useRef, useState } from "react";
 import { Parameter } from "./types";
 import { getOrCreateDevice } from "./RNBOCore";
 import VolumeControl from "../ui/VolumeControl";
 import ParameterSlider from "../ui/ParameterSlider";
+import { useSequencer } from "../../context/SequencerProvider";
 
 interface Props {
   onAngleChange?: (angle: number) => void;
   onNumCornersChange?: (numCorners: number) => void;
 }
 
-const RNBODevice = ({ onAngleChange, onNumCornersChange }: Props) => {
+const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
+  const { state, toggleEvent, setNote, setRnboDevice } = useSequencer();
   const [parameters, setParameters] = useState<Parameter[]>([]);
   const [, setIsLoaded] = useState(false);
   const [deviceStatus, setDeviceStatus] = useState("Initializing...");
@@ -27,6 +28,7 @@ const RNBODevice = ({ onAngleChange, onNumCornersChange }: Props) => {
           setDeviceStatus("Failed to create RNBO device");
           return;
         }
+        setRnboDevice(device);
 
         // Initialize numCorners value
         if (onNumCornersChange) {
@@ -145,4 +147,4 @@ const RNBODevice = ({ onAngleChange, onNumCornersChange }: Props) => {
   );
 };
 
-export default RNBODevice;
+export default RNBOShapeSequencer;

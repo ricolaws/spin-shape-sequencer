@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { MessageEvent } from "@rnbo/js";
+import { MessageEvent, TimeNow } from "@rnbo/js";
 
 // Define types for our sequencer state
 interface NoteData {
@@ -11,7 +11,6 @@ interface SequencerState {
   events: {
     notes: NoteData[];
     active: boolean[];
-    currentStep: number;
   };
 }
 
@@ -20,20 +19,16 @@ const SequencerContext = createContext<{
   state: SequencerState;
   toggleEvent: (index: number) => void;
   setNote: (index: number, note: NoteData) => void;
+  setRnboDevice: React.Dispatch<any>;
 }>(null!);
 
 // Hook for using the sequencer context
 export const useSequencer = () => useContext(SequencerContext);
 
-interface SequencerProviderProps {
-  children: React.ReactNode;
-  rnboDevice: any; // Type for your RNBO device
-}
-
-export const SequencerProvider: React.FC<SequencerProviderProps> = ({
+export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
-  rnboDevice,
 }) => {
+  const [rnboDevice, setRnboDevice] = useState<any>(null);
   // Initial state with dummy data
   const [state, setState] = useState<SequencerState>({
     events: {
@@ -57,7 +52,7 @@ export const SequencerProvider: React.FC<SequencerProviderProps> = ({
       ],
       active: [
         true,
-        false,
+        true,
         true,
         false,
         true,
@@ -65,15 +60,14 @@ export const SequencerProvider: React.FC<SequencerProviderProps> = ({
         true,
         false,
         true,
-        false,
+        true,
+        true,
+        true,
         true,
         false,
         true,
-        false,
         true,
-        false,
       ],
-      currentStep: 0,
     },
   });
 
@@ -87,30 +81,75 @@ export const SequencerProvider: React.FC<SequencerProviderProps> = ({
 
   // Function to sync state to RNBO
   const syncToRNBO = (state: SequencerState, device: any) => {
-    if (!device) return;
+    if (!device || typeof device.scheduleEvent !== "function") {
+      console.error(
+        "RNBO device is not properly initialized or does not support scheduleEvent"
+      );
+      return;
+    }
 
     // Send each note data to RNBO
     state.events.notes.forEach((note, index) => {
-      // Schedule an event to update note data
-      const TimeNow = 0; // Send immediately
       const event = new MessageEvent(TimeNow, "update_note", [
         index,
         note.pitch,
         note.velocity,
       ]);
-      device.scheduleEvent(event);
-    });
-
-    // Send each active state to RNBO
-    state.events.active.forEach((isActive, index) => {
-      const TimeNow = 0;
-      const event = new MessageEvent(TimeNow, "update_active", [
-        index,
-        isActive ? 1 : 0,
-      ]);
-      device.scheduleEvent(event);
+      try {
+        device.scheduleEvent(event);
+      } catch (error) {
+        console.error(`Error scheduling event for note ${index}:`, error);
+      }
     });
   };
+
+  //   const syncToRNBO = (state: SequencerState, device: any) => {
+  //     if (!device) return;
+
+  //     try {
+  //       // Instead of using MessageEvent and scheduleEvent, use a method
+  //       // that's more likely to be supported by your RNBO implementation
+
+  //       // Option 1: Use setParameterValue if available
+  //       state.events.notes.forEach((note, index) => {
+  //         if (typeof device.setParameterValue === "function") {
+  //           try {
+  //             device.setParameterValue(`note_${index}_pitch`, note.pitch);
+  //             device.setParameterValue(`note_${index}_velocity`, note.velocity);
+  //           } catch (err) {
+  //             console.error(`Error setting parameter for note ${index}:`, err);
+  //           }
+  //         }
+  //       });
+
+  //       // Option 2: Try using a sendEvent method if it exists
+  //       if (typeof device.sendEvent === "function") {
+  //         state.events.notes.forEach((note, index) => {
+  //           try {
+  //             device.sendEvent("update_note", [index, note.pitch, note.velocity]);
+  //           } catch (err) {
+  //             console.error(`Error sending event for note ${index}:`, err);
+  //           }
+  //         });
+  //       }
+
+  //       // Option 3: Try using any outport methods from your device
+  //       if (
+  //         device.outports &&
+  //         typeof device.outports.update_note === "function"
+  //       ) {
+  //         state.events.notes.forEach((note, index) => {
+  //           try {
+  //             device.outports.update_note(index, note.pitch, note.velocity);
+  //           } catch (err) {
+  //             console.error(`Error using outport for note ${index}:`, err);
+  //           }
+  //         });
+  //       }
+  //     } catch (error) {
+  //       console.error("Error syncing to RNBO:", error);
+  //     }
+  //   };
 
   // Toggle event active state
   const toggleEvent = (index: number) => {
@@ -174,8 +213,16 @@ export const SequencerProvider: React.FC<SequencerProviderProps> = ({
     });
   };
 
+  // Return setRnboDevice in the context value
   return (
-    <SequencerContext.Provider value={{ state, toggleEvent, setNote }}>
+    <SequencerContext.Provider
+      value={{
+        state,
+        toggleEvent,
+        setNote,
+        setRnboDevice, // Expose this to let components set the device
+      }}
+    >
       {children}
     </SequencerContext.Provider>
   );
