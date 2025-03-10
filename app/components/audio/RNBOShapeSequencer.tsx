@@ -12,20 +12,14 @@ interface Props {
 }
 
 const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
-  const {
-    state,
-    toggleEvent,
-    setNote,
-    setRnboDevice,
-    triggerEvent,
-    setNumEvents,
-  } = useSequencer();
+  const { setRnboDevice, triggerEvent, setNumEvents } = useSequencer();
   const [parameters, setParameters] = useState<Parameter[]>([]);
   const [, setIsLoaded] = useState(false);
   const [deviceStatus, setDeviceStatus] = useState("Initializing...");
   const messageSubscriptionRef = useRef<{ unsubscribe: () => void } | null>(
     null
   );
+  const numEventsInitializedRef = useRef(false);
 
   useEffect(() => {
     async function setup() {
@@ -47,15 +41,18 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
           }
         }
 
-        // Initialize numEvents from RNBO device if it exists
-        const numEventsParam = device.parameters.find(
-          (p) => p.name === "numEvents"
-        );
-        if (numEventsParam && typeof setNumEvents === "function") {
-          console.log(
-            `Initializing numEvents to ${Math.round(numEventsParam.value)}`
+        // Initialize numEvents from RNBO device if it exists AND we haven't done it yet
+        if (!numEventsInitializedRef.current) {
+          const numEventsParam = device.parameters.find(
+            (p) => p.name === "numEvents"
           );
-          setNumEvents(Math.round(numEventsParam.value));
+          if (numEventsParam && typeof setNumEvents === "function") {
+            console.log(
+              `Initializing numEvents to ${Math.round(numEventsParam.value)}`
+            );
+            setNumEvents(Math.round(numEventsParam.value));
+            numEventsInitializedRef.current = true; // Mark as initialized
+          }
         }
 
         setParameters(device.parameters);
