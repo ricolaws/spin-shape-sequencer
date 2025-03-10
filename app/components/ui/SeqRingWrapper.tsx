@@ -23,15 +23,15 @@ const SeqRingWrapper: React.FC<SeqRingWrapperProps> = ({
   const ringRef = useRef<RingRef>(null);
 
   // Store ringRef in a global variable for access by RNBO
-  useEffect(() => {
-    // @ts-ignore - Adding ringRef to window for global access
-    window.globalRingRef = ringRef;
+  //   useEffect(() => {
+  //     // @ts-ignore - Adding ringRef to window for global access
+  //     window.globalRingRef = ringRef;
 
-    return () => {
-      // @ts-ignore - Clean up on unmount
-      delete window.globalRingRef;
-    };
-  }, []);
+  //     return () => {
+  //       // @ts-ignore - Clean up on unmount
+  //       delete window.globalRingRef;
+  //     };
+  //   }, []);
 
   // Register as a trigger listener
   useEffect(() => {
@@ -59,25 +59,6 @@ const SeqRingWrapper: React.FC<SeqRingWrapperProps> = ({
     // Clean up on unmount
     return unregister;
   }, [registerTriggerListener]);
-
-  // For testing: add a periodic trigger to verify animations work
-  useEffect(() => {
-    // Set up a periodic test trigger
-    const interval = setInterval(() => {
-      if (ringRef.current) {
-        const randomIndex = Math.floor(
-          Math.random() * (state.events.notes.length || 8)
-        );
-        console.log(
-          `TEST: Automated periodic test trigger for event ${randomIndex}`
-        );
-        ringRef.current.triggerEvent(randomIndex);
-      }
-    }, 5000); // Every 5 seconds
-
-    // Clear on unmount
-    return () => clearInterval(interval);
-  }, [state.events.notes.length]);
 
   // Only render the SeqRing component inside the Canvas
   return (

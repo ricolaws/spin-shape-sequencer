@@ -33,9 +33,6 @@ const EventMarker: React.FC<EventMarkerProps> = ({
   // Debug logging for event properties
   useEffect(() => {
     if (event.triggered && !debugTriggered) {
-      console.log(
-        `EventMarker ${event.index}: Event triggered with opacity ${event.triggerOpacity}`
-      );
       setDebugTriggered(true);
     } else if (!event.triggered && debugTriggered) {
       setDebugTriggered(false);
@@ -58,13 +55,6 @@ const EventMarker: React.FC<EventMarkerProps> = ({
   // Animation frame update
   useFrame(() => {
     if (event.triggered && triggerRef.current) {
-      // Debug visualization state
-      if (triggerRef.current.scale.x !== 1 + event.triggerOpacity * 0.5) {
-        console.log(
-          `EventMarker ${event.index}: Animating with opacity ${event.triggerOpacity}`
-        );
-      }
-
       // For triggered animation pulse
       triggerRef.current.scale.x = 1 + event.triggerOpacity * 0.5;
       triggerRef.current.scale.y = 1 + event.triggerOpacity * 0.5;
@@ -73,17 +63,8 @@ const EventMarker: React.FC<EventMarkerProps> = ({
       // Fade out trigger effect
       if (event.triggerOpacity > 0) {
         event.triggerOpacity -= 0.02;
-        // Debug log when fading out
-        if (Math.round(event.triggerOpacity * 100) % 10 === 0) {
-          console.log(
-            `EventMarker ${
-              event.index
-            }: Fading opacity: ${event.triggerOpacity.toFixed(2)}`
-          );
-        }
       } else {
         event.endTrigger();
-        console.log(`EventMarker ${event.index}: Trigger ended`);
       }
     }
   });
@@ -129,7 +110,7 @@ const EventMarker: React.FC<EventMarkerProps> = ({
           ref={triggerRef}
           position={[0, 0, -0.01]} // Slightly behind the main marker
         >
-          <circleGeometry args={[size * 2, 32]} />
+          <circleGeometry args={[size * 1.2, 32]} />
           <meshBasicMaterial
             color={triggerColor}
             transparent={true}

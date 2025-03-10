@@ -51,8 +51,6 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
         }
 
         messageSubscriptionRef.current = device.messageEvent.subscribe((ev) => {
-          console.log("RNBO message received:", ev.tag, ev.payload);
-
           // Handle angle messages
           if (ev.tag === "angle") {
             if (onAngleChange) onAngleChange(ev.payload);
@@ -66,22 +64,10 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
               `RNBO trigger message received for event ${eventIndex}`
             );
 
-            // Try multiple approaches to ensure triggering works
-
             // 1. Use the context triggerEvent function
             if (typeof triggerEvent === "function") {
               console.log(`Calling triggerEvent(${eventIndex}) from context`);
               triggerEvent(eventIndex);
-            }
-
-            // 2. Try accessing the global ring reference
-            // @ts-ignore - Access the global ring reference
-            if (window.globalRingRef && window.globalRingRef.current) {
-              console.log(
-                `Calling globalRingRef.current.triggerEvent(${eventIndex})`
-              );
-              // @ts-ignore
-              window.globalRingRef.current.triggerEvent(eventIndex);
             }
           }
         });
@@ -102,23 +88,6 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
       }
     };
   }, [onAngleChange, onNumCornersChange, setRnboDevice, triggerEvent]);
-
-  // Add manual test trigger button
-  const handleTestTrigger = () => {
-    const randomEventIndex = Math.floor(Math.random() * 8);
-    console.log(`Manual test: Triggering event ${randomEventIndex}`);
-
-    // Try both approaches
-    if (typeof triggerEvent === "function") {
-      triggerEvent(randomEventIndex);
-    }
-
-    // @ts-ignore - Access the global ring reference
-    if (window.globalRingRef && window.globalRingRef.current) {
-      // @ts-ignore
-      window.globalRingRef.current.triggerEvent(randomEventIndex);
-    }
-  };
 
   const handleParameterChange = async (paramId: string, value: number) => {
     try {
@@ -176,17 +145,7 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
     <div className="p-4 border rounded-md bg-[#3d3d3d] text-white">
       <h2 className="text-xl font-semibold mb-2">RNBO Device</h2>
       <p className="text-sm text-gray-300 mb-4">{deviceStatus}</p>
-
       <VolumeControl />
-
-      {/* Test trigger button */}
-      <button
-        className="mb-4 px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
-        onClick={handleTestTrigger}
-      >
-        Test Trigger
-      </button>
-
       <div className="space-y-4">
         <h3 className="font-medium">Parameters</h3>
         {parameters.length === 0 ? (

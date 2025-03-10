@@ -28,8 +28,7 @@ export default function Home() {
             Rotation: {angleOfRotation.toFixed(1)}°
           </span>
         </div>
-
-        <SequencerProvider>
+        <SequencerProvider data-testid="sequencer-provider">
           <RNBOShapeSequencer
             onAngleChange={handleAngleChange}
             onNumCornersChange={handleSidesChange}

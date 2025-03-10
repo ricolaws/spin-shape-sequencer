@@ -118,7 +118,6 @@ const SeqRing = forwardRef<RingRef, SeqRingProps>(
     // Initialize events ONLY when necessary
     useEffect(() => {
       if (!shouldReinitialize()) {
-        console.log("Skipping events initialization - no changes detected");
         return;
       }
 
@@ -135,15 +134,18 @@ const SeqRing = forwardRef<RingRef, SeqRingProps>(
 
         const event = new Event(i, noteValue, active);
 
-        // Calculate angle (starting from the top, like a clock)
-        const theta = (i / eventCount) * Math.PI * 2 - Math.PI / 2;
-        event.setPosition(radius, theta);
+        const theta = (i / eventCount) * Math.PI * 2;
 
+        event.setPosition(radius, theta);
         newEvents.push(event);
       }
 
       console.log(`SeqRing: ${newEvents.length} events created`);
       setEvents(newEvents);
+
+      setTimeout(() => {
+        debugEventPositions();
+      }, 100);
     }, [eventCount, radius, noteValues, initialActiveEvents]);
 
     // Handle event click
@@ -171,17 +173,16 @@ const SeqRing = forwardRef<RingRef, SeqRingProps>(
 
     // Public method to trigger an event (to be called from parent)
     const triggerEvent = (index: number) => {
-      console.log(`SeqRing.triggerEvent called for index: ${index}`);
-
       if (index >= 0 && index < events.length) {
-        console.log(
-          `SeqRing: Triggering event ${index}, active: ${events[index].active}`
-        );
+        console.log(`SeqRing: Triggering event at index ${index}`);
 
+        // Actually call the trigger method on the event
         setEvents((prevEvents) => {
           const newEvents = [...prevEvents];
-          const didTrigger = newEvents[index].trigger();
-          console.log(`SeqRing: Event ${index} trigger result: ${didTrigger}`);
+          if (newEvents[index]) {
+            console.log(`SeqRing: Calling trigger() on event ${index}`);
+            newEvents[index].trigger();
+          }
           return newEvents;
         });
       } else {
@@ -199,6 +200,24 @@ const SeqRing = forwardRef<RingRef, SeqRingProps>(
       }),
       [events]
     ); // Important: depend on events array
+
+    const debugEventPositions = () => {
+      console.log("===== Event Positions Debug =====");
+      events.forEach((event) => {
+        const noteDisplay = event.getNoteDisplay();
+        console.log(
+          `Event ${
+            event.index
+          } (${noteDisplay}): Position [${event.position[0].toFixed(
+            2
+          )}, ${event.position[1].toFixed(2)}], Angle: ${(
+            (Math.atan2(event.position[1], event.position[0]) * 180) /
+            Math.PI
+          ).toFixed(2)}°`
+        );
+      });
+      console.log("================================");
+    };
 
     return (
       <group ref={groupRef}>

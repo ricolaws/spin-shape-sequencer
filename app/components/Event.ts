@@ -32,9 +32,7 @@ export class Event {
 
   trigger(): boolean {
     if (this.active) {
-      console.log(
-        `Event ${this.index}: Triggering (already triggered: ${this.triggered})`
-      );
+      console.log(`Event ${this.index}: Triggering)`);
       this.triggered = true;
       this.triggerOpacity = 1;
       return true;

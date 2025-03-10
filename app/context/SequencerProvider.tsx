@@ -52,7 +52,7 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
   const [state, setState] = useState<SequencerState>(() => {
     // Initial note and active data
     const initialNotes = [
-      { pitch: 55, velocity: 110 },
+      { pitch: 54, velocity: 110 },
       { pitch: 62, velocity: 80 },
       { pitch: 60, velocity: 100 },
       { pitch: 65, velocity: 80 },

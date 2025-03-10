@@ -87,10 +87,9 @@ const DynamicPolygon: React.FC<DynamicPolygonProps> = ({
   // Update rotation when angleOfRotation changes
   useEffect(() => {
     if (groupRef.current) {
-      // Rotate around the Y axis to rotate while lying flat
       groupRef.current.rotation.y = (angleOfRotation * Math.PI) / 180;
     }
-  }, [angleOfRotation]);
+  }, [angleOfRotation, validSides, outerRadius]);
 
   return (
     <>
