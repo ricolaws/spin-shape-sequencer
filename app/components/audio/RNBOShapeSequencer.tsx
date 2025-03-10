@@ -12,7 +12,14 @@ interface Props {
 }
 
 const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
-  const { setRnboDevice, triggerEvent } = useSequencer();
+  const {
+    state,
+    toggleEvent,
+    setNote,
+    setRnboDevice,
+    triggerEvent,
+    setNumEvents,
+  } = useSequencer();
   const [parameters, setParameters] = useState<Parameter[]>([]);
   const [, setIsLoaded] = useState(false);
   const [deviceStatus, setDeviceStatus] = useState("Initializing...");
@@ -38,6 +45,17 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
           if (numCornersParam) {
             onNumCornersChange(Math.round(numCornersParam.value));
           }
+        }
+
+        // Initialize numEvents from RNBO device if it exists
+        const numEventsParam = device.parameters.find(
+          (p) => p.name === "numEvents"
+        );
+        if (numEventsParam && typeof setNumEvents === "function") {
+          console.log(
+            `Initializing numEvents to ${Math.round(numEventsParam.value)}`
+          );
+          setNumEvents(Math.round(numEventsParam.value));
         }
 
         setParameters(device.parameters);
@@ -80,7 +98,13 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
         messageSubscriptionRef.current = null;
       }
     };
-  }, [onAngleChange, onNumCornersChange, setRnboDevice, triggerEvent]);
+  }, [
+    onAngleChange,
+    onNumCornersChange,
+    setRnboDevice,
+    triggerEvent,
+    setNumEvents,
+  ]);
 
   const handleParameterChange = async (paramId: string, value: number) => {
     try {
@@ -94,11 +118,18 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
           value = Math.round(value);
         }
 
+        // Set the value in the RNBO device
         param.value = value;
 
-        // Propagate numCorners changes to the Scene component
+        // Special handling for specific parameters
         if (param.name === "numCorners" && onNumCornersChange) {
           onNumCornersChange(Math.round(value));
+        }
+
+        // Handle numEvents parameter
+        if (param.name === "numEvents" && typeof setNumEvents === "function") {
+          // We don't need to sync to RNBO since the slider already did that
+          setNumEvents(Math.round(value));
         }
       }
     } catch (err) {

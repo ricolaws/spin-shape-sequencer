@@ -6,7 +6,7 @@ import React, {
   useCallback,
 } from "react";
 import { MessageEvent, TimeNow } from "@rnbo/js";
-import { Event } from "../components/Event"; // Import the Event class
+import { Event } from "../components/Event";
 
 // Define the trigger listener interface
 interface TriggerListener {
@@ -24,7 +24,8 @@ interface SequencerState {
     notes: NoteData[];
     active: boolean[];
   };
-  visualEvents: Event[]; // Add array of Event objects for visual representation
+  visualEvents: Event[]; // Array of Event objects for visual representation
+  numEvents: number; // Number of events to display
 }
 
 // Create context with updated type definition
@@ -33,8 +34,9 @@ const SequencerContext = createContext<{
   toggleEvent: (index: number) => void;
   setNote: (index: number, note: NoteData) => void;
   setRnboDevice: React.Dispatch<any>;
-  triggerEvent: (index: number) => void; // Add method for triggering events
-  registerTriggerListener: (listener: TriggerListener) => () => void; // Add listener registration
+  triggerEvent: (index: number) => void;
+  registerTriggerListener: (listener: TriggerListener) => () => void;
+  setNumEvents: (num: number) => void;
 }>(null!);
 
 // Hook for using the sequencer context
@@ -101,6 +103,7 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
         active: initialActive,
       },
       visualEvents: visualEvents,
+      numEvents: initialNotes.length, // Default to showing all events
     };
   });
 
@@ -137,17 +140,14 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   // Register a trigger listener (using useCallback to maintain stability)
-  const registerTriggerListener = React.useCallback(
-    (listener: TriggerListener) => {
-      setTriggerListeners((prev) => [...prev, listener]);
+  const registerTriggerListener = useCallback((listener: TriggerListener) => {
+    setTriggerListeners((prev) => [...prev, listener]);
 
-      // Return a function to unregister
-      return () => {
-        setTriggerListeners((prev) => prev.filter((l) => l !== listener));
-      };
-    },
-    []
-  );
+    // Return a function to unregister
+    return () => {
+      setTriggerListeners((prev) => prev.filter((l) => l !== listener));
+    };
+  }, []);
 
   // Toggle event active state
   const toggleEvent = (index: number) => {
@@ -230,15 +230,27 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
     (index: number) => {
       if (index < 0 || index >= state.visualEvents.length) return;
 
-      // Only proceed if the event is active
-      if (!state.events.active[index]) return;
+      // First update our internal state
+      setState((prev) => {
+        // Only update if the event is active
+        if (prev.events.active[index]) {
+          const newVisualEvents = [...prev.visualEvents];
+          if (newVisualEvents[index]) {
+            // Call the trigger method on the Event object
+            newVisualEvents[index].trigger();
 
-      // Directly trigger the event without a state update
-      if (state.visualEvents[index]) {
-        state.visualEvents[index].trigger();
-      }
+            // console.log(`Event ${index} triggered in SequencerProvider`);
+          }
 
-      // Notify all registered listeners
+          return {
+            ...prev,
+            visualEvents: newVisualEvents,
+          };
+        }
+        return prev;
+      });
+
+      // Then notify all registered listeners
       triggerListeners.forEach((listener) => {
         try {
           listener.onTrigger(index);
@@ -247,10 +259,27 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       });
     },
-    [state.visualEvents, state.events.active, triggerListeners]
+    [state.visualEvents, triggerListeners]
   );
 
-  // Return context with added functions
+  // Set the number of events to display
+  const setNumEvents = useCallback(
+    (num: number) => {
+      const validNum = Math.max(
+        1,
+        Math.min(state.events.notes.length, Math.round(num))
+      );
+      console.log(`Setting numEvents to ${validNum}`);
+
+      setState((prev) => ({
+        ...prev,
+        numEvents: validNum,
+      }));
+    },
+    [state.events.notes.length]
+  );
+
+  // Return context with all functions
   return (
     <SequencerContext.Provider
       value={{
@@ -260,6 +289,7 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
         setRnboDevice,
         triggerEvent,
         registerTriggerListener,
+        setNumEvents,
       }}
     >
       {children}

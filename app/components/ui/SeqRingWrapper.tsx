@@ -1,5 +1,3 @@
-// In SeqRingWrapper.tsx, simplify the component:
-
 import React, { useRef, useEffect } from "react";
 import { useSequencer } from "../../context/SequencerProvider";
 import SeqRing, { RingRef } from "./SeqRing";
@@ -19,7 +17,7 @@ const SeqRingWrapper: React.FC<SeqRingWrapperProps> = ({
   color = "#ffffff",
   activeColor = "#ff4500",
   inactiveColor = "#555555",
-  triggerColor = "#ffffff",
+  triggerColor = "#ffaa00",
 }) => {
   const { state, toggleEvent, registerTriggerListener } = useSequencer();
   const ringRef = useRef<RingRef>(null);
@@ -31,34 +29,37 @@ const SeqRingWrapper: React.FC<SeqRingWrapperProps> = ({
       return;
     }
 
-    // Create a stable listener object
     const listener = {
       onTrigger: (index: number) => {
-        if (ringRef.current) {
-          ringRef.current.triggerEvent(index);
+        // Only process triggers for events that are within our displayed range
+        if (index >= 0 && index < state.numEvents) {
+          if (ringRef.current) {
+            ringRef.current.triggerEvent(index);
+          }
         }
       },
     };
 
-    // Register and get unregister function
     const unregister = registerTriggerListener(listener);
-
-    // Clean up on unmount
     return unregister;
-  }, [registerTriggerListener]);
+  }, [registerTriggerListener, state.numEvents]);
+
+  // Get only the notes and active states for the visible events
+  const visibleNotes = state.events.notes.slice(0, state.numEvents);
+  const visibleActive = state.events.active.slice(0, state.numEvents);
 
   return (
     <SeqRing
       ref={ringRef}
       radius={radius}
-      eventCount={state.events.notes.length}
+      eventCount={state.numEvents} // Use numEvents instead of notes.length
       markerSize={markerSize}
       color={color}
       activeColor={activeColor}
       inactiveColor={inactiveColor}
       triggerColor={triggerColor}
-      noteValues={state.events.notes.map((note) => note.pitch)}
-      initialActiveEvents={state.events.active}
+      noteValues={visibleNotes.map((note) => note.pitch)}
+      initialActiveEvents={visibleActive}
       onEventToggle={toggleEvent}
     />
   );

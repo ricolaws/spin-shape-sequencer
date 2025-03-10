@@ -87,6 +87,7 @@ const SeqRing = forwardRef<RingRef, SeqRingProps>(
     }, [radius, segments]);
 
     // Check if we need to reinitialize events
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     const shouldReinitialize = () => {
       if (!initCalledRef.current) {
         initCalledRef.current = true;
@@ -142,11 +143,13 @@ const SeqRing = forwardRef<RingRef, SeqRingProps>(
 
       console.log(`SeqRing: ${newEvents.length} events created`);
       setEvents(newEvents);
-
-      setTimeout(() => {
-        debugEventPositions();
-      }, 100);
-    }, [eventCount, radius, noteValues, initialActiveEvents]);
+    }, [
+      eventCount,
+      radius,
+      noteValues,
+      initialActiveEvents,
+      shouldReinitialize,
+    ]);
 
     // Handle event click
     const handleEventClick = (index: number) => {
@@ -194,24 +197,6 @@ const SeqRing = forwardRef<RingRef, SeqRingProps>(
       }),
       [events]
     ); // Important: depend on events array
-
-    const debugEventPositions = () => {
-      console.log("===== Event Positions Debug =====");
-      events.forEach((event) => {
-        const noteDisplay = event.getNoteDisplay();
-        console.log(
-          `Event ${
-            event.index
-          } (${noteDisplay}): Position [${event.position[0].toFixed(
-            2
-          )}, ${event.position[1].toFixed(2)}], Angle: ${(
-            (Math.atan2(event.position[1], event.position[0]) * 180) /
-            Math.PI
-          ).toFixed(2)}°`
-        );
-      });
-      console.log("================================");
-    };
 
     return (
       <group ref={groupRef}>
