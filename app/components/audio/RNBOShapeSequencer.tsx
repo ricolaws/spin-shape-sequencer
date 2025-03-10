@@ -12,8 +12,7 @@ interface Props {
 }
 
 const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
-  const { state, toggleEvent, setNote, setRnboDevice, triggerEvent } =
-    useSequencer();
+  const { setRnboDevice, triggerEvent } = useSequencer();
   const [parameters, setParameters] = useState<Parameter[]>([]);
   const [, setIsLoaded] = useState(false);
   const [deviceStatus, setDeviceStatus] = useState("Initializing...");
@@ -54,20 +53,14 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
           // Handle angle messages
           if (ev.tag === "angle") {
             if (onAngleChange) onAngleChange(ev.payload);
-          }
-          // Handle trigger messages from RNBO
-          else if (ev.tag === "trigger") {
-            // The payload should contain the index of the triggered event
+          } else if (ev.tag === "trigger") {
             const eventIndex = ev.payload;
-
-            console.log(
-              `RNBO trigger message received for event ${eventIndex}`
-            );
-
-            // 1. Use the context triggerEvent function
+            // Trigger the event through the context
             if (typeof triggerEvent === "function") {
-              console.log(`Calling triggerEvent(${eventIndex}) from context`);
+              console.log(`RNBO: Triggering event ${eventIndex}`);
               triggerEvent(eventIndex);
+            } else {
+              console.warn("triggerEvent function not available in context");
             }
           }
         });

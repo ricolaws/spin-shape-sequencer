@@ -174,17 +174,11 @@ const SeqRing = forwardRef<RingRef, SeqRingProps>(
     // Public method to trigger an event (to be called from parent)
     const triggerEvent = (index: number) => {
       if (index >= 0 && index < events.length) {
-        console.log(`SeqRing: Triggering event at index ${index}`);
-
-        // Actually call the trigger method on the event
-        setEvents((prevEvents) => {
-          const newEvents = [...prevEvents];
-          if (newEvents[index]) {
-            console.log(`SeqRing: Calling trigger() on event ${index}`);
-            newEvents[index].trigger();
-          }
-          return newEvents;
-        });
+        // Directly trigger the event without unnecessary state updates
+        // This approach avoids re-rendering the entire component
+        if (events[index]) {
+          events[index].trigger();
+        }
       } else {
         console.warn(
           `SeqRing: Invalid event index ${index} (events length: ${events.length})`

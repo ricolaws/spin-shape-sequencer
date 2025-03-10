@@ -230,27 +230,15 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
     (index: number) => {
       if (index < 0 || index >= state.visualEvents.length) return;
 
-      // First update our internal state
-      setState((prev) => {
-        // Only update if the event is active
-        if (prev.events.active[index]) {
-          const newVisualEvents = [...prev.visualEvents];
-          if (newVisualEvents[index]) {
-            // Call the trigger method on the Event object
-            newVisualEvents[index].trigger();
+      // Only proceed if the event is active
+      if (!state.events.active[index]) return;
 
-            // console.log(`Event ${index} triggered in SequencerProvider`);
-          }
+      // Directly trigger the event without a state update
+      if (state.visualEvents[index]) {
+        state.visualEvents[index].trigger();
+      }
 
-          return {
-            ...prev,
-            visualEvents: newVisualEvents,
-          };
-        }
-        return prev;
-      });
-
-      // Then notify all registered listeners
+      // Notify all registered listeners
       triggerListeners.forEach((listener) => {
         try {
           listener.onTrigger(index);
