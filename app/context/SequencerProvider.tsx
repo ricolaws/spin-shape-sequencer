@@ -54,21 +54,21 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
   const [state, setState] = useState<SequencerState>(() => {
     // Initial note and active data
     const initialNotes = [
-      { pitch: 54, velocity: 110 },
+      { pitch: 55, velocity: 110 },
       { pitch: 62, velocity: 80 },
       { pitch: 60, velocity: 100 },
       { pitch: 65, velocity: 80 },
       { pitch: 67, velocity: 100 },
-      { pitch: 69, velocity: 80 },
-      { pitch: 71, velocity: 100 },
+      { pitch: 70, velocity: 80 },
+      { pitch: 63, velocity: 100 },
       { pitch: 72, velocity: 99 },
       { pitch: 60, velocity: 100 },
       { pitch: 62, velocity: 80 },
-      { pitch: 64, velocity: 100 },
+      { pitch: 63, velocity: 100 },
       { pitch: 65, velocity: 80 },
       { pitch: 67, velocity: 100 },
-      { pitch: 69, velocity: 80 },
-      { pitch: 71, velocity: 100 },
+      { pitch: 58, velocity: 80 },
+      { pitch: 60, velocity: 100 },
       { pitch: 72, velocity: 80 },
     ];
 
