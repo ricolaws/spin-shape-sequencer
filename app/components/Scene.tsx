@@ -40,6 +40,7 @@ const Scene: React.FC<SceneProps> = ({ sides, angleOfRotation }) => {
           color="#ffffff"
           activeColor="#ffffff"
           inactiveColor="#666666"
+          triggerColor="#ff4500"
         />
         <EffectComposer>
           <Bloom

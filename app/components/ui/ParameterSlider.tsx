@@ -61,7 +61,7 @@ const ParameterSlider: React.FC<ParameterSliderProps> = ({
           isNaN(parseFloat(inputValue)) ? param.value : parseFloat(inputValue)
         }
         onChange={handleSliderChange}
-        className="w-full accent-blue-500 h-2 rounded-lg appearance-none bg-gray-700"
+        className="w-full accent-[#0099ff] h-2 rounded-lg appearance-none bg-[#ebebeb]"
       />
       <input
         type="number"

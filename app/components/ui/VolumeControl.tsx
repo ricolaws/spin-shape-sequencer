@@ -20,7 +20,7 @@ const VolumeControl: React.FC = () => {
           step={0.01}
           value={volume}
           onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-          className="w-full accent-blue-500 h-2 rounded-lg appearance-none bg-gray-700"
+          className="w-full accent-[#0099ff] h-2 rounded-lg appearance-none bg-[#ebebeb]"
         />
         <span className="text-sm w-12 text-right">
           {Math.round(volume * 100)}%

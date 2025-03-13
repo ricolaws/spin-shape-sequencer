@@ -11,6 +11,20 @@ interface Props {
   onNumCornersChange?: (numCorners: number) => void;
 }
 
+// Define the list of parameters to display and their order
+const DISPLAY_PARAMETERS = [
+  "speed",
+  "numEvents",
+  "numCorners",
+  "noteLength",
+  "Release",
+  "partials",
+  "tone",
+  "balance",
+];
+
+const FLOAT_PARAMETERS = ["speed", "tone", "balance"];
+
 const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
   const { setRnboDevice, triggerEvent, setNumEvents } = useSequencer();
   const [parameters, setParameters] = useState<Parameter[]>([]);
@@ -31,7 +45,6 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
         }
         setRnboDevice(device);
 
-        // Initialize numCorners value
         if (onNumCornersChange) {
           const numCornersParam = device.parameters.find(
             (p) => p.name === "numCorners"
@@ -41,7 +54,6 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
           }
         }
 
-        // Initialize numEvents from RNBO device if it exists AND we haven't done it yet
         if (!numEventsInitializedRef.current) {
           const numEventsParam = device.parameters.find(
             (p) => p.name === "numEvents"
@@ -55,7 +67,20 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
           }
         }
 
-        setParameters(device.parameters);
+        // Filter parameters to only include those in DISPLAY_PARAMETERS list
+        const filteredParams = device.parameters.filter((p) =>
+          DISPLAY_PARAMETERS.includes(p.name)
+        );
+
+        // Sort parameters according to the order in DISPLAY_PARAMETERS
+        const sortedParams = [...filteredParams].sort((a, b) => {
+          return (
+            DISPLAY_PARAMETERS.indexOf(a.name) -
+            DISPLAY_PARAMETERS.indexOf(b.name)
+          );
+        });
+
+        setParameters(sortedParams);
         setIsLoaded(true);
         setDeviceStatus("Ready - Click anywhere to start audio");
 
@@ -110,8 +135,9 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
 
       const param = device.parameters.find((p) => p.id === paramId);
       if (param) {
-        // Round to integer for all parameters except speed
-        if (param.name !== "speed") {
+        // Round to integer for parameters not in FLOAT_PARAMETERS
+        const shouldUseFloat = FLOAT_PARAMETERS.includes(param.name);
+        if (!shouldUseFloat) {
           value = Math.round(value);
         }
 
@@ -134,9 +160,11 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
     }
   };
 
-  // Custom renderer for specific parameters
+  // Custom renderer for parameters
   const renderParameter = (param: Parameter) => {
-    if (param.name !== "speed") {
+    const shouldUseFloat = FLOAT_PARAMETERS.includes(param.name);
+
+    if (!shouldUseFloat) {
       // Create a modified parameter that enforces integer values
       const integerParam: Parameter = {
         ...param,
@@ -153,6 +181,7 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
       );
     }
 
+    // Float parameters use the original parameter configuration
     return (
       <ParameterSlider
         key={param.id}
@@ -163,7 +192,7 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
   };
 
   return (
-    <div className="p-4 border rounded-md bg-[#3d3d3d] text-white">
+    <div className="p-4 border rounded-md bg-[#282828] text-white">
       <h2 className="text-xl font-semibold mb-2">RNBO Device</h2>
       <p className="text-sm text-gray-300 mb-4">{deviceStatus}</p>
       <VolumeControl />
