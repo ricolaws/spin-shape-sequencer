@@ -51,10 +51,10 @@ const NoteSlot: React.FC<NoteSlotProps> = ({
 
   // Determine background color based on state
   const getBgColor = () => {
-    if (isActive && inCurrentWindow) return "bg-green-500";
-    if (isActive) return "bg-green-700";
+    if (isActive && inCurrentWindow) return "bg-[#ff4500]";
+    if (isActive) return "bg-[#ff4500]";
     if (inCurrentWindow) return "bg-gray-500";
-    return "bg-gray-700";
+    return "bg-[#282828]";
   };
 
   return (
@@ -65,10 +65,10 @@ const NoteSlot: React.FC<NoteSlotProps> = ({
         top: y,
         width,
         height,
-        opacity: inCurrentWindow ? 1 : 0.7,
+        opacity: inCurrentWindow ? 1 : 0.8,
       }}
     >
-      <span className="text-white text-xs font-medium">
+      <span className="text-white text-s font-medium">
         {getNoteDisplay(pitch)}
       </span>
     </div>

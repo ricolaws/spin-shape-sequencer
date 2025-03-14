@@ -317,7 +317,7 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
           if (newVisualEvents[index]) {
             // Call the trigger method on the Event object
             newVisualEvents[index].trigger();
-            console.log(`Event ${index} triggered in SequencerProvider`);
+            // console.log(`Event ${index} triggered in SequencerProvider`);
           }
 
           return {

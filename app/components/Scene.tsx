@@ -25,7 +25,7 @@ const Scene: React.FC<SceneProps> = ({ sides, angleOfRotation }) => {
         <OrbitControls enableZoom={false} />
         <DynamicPolygon
           sides={sides}
-          outerRadius={2}
+          outerRadius={2.2}
           innerRadius={1.8}
           height={0.2}
           color="#dbdbdb"
@@ -35,7 +35,7 @@ const Scene: React.FC<SceneProps> = ({ sides, angleOfRotation }) => {
           angleOfRotation={angleOfRotation}
         />
         <SeqRingWrapper
-          radius={2.1}
+          radius={2.3}
           markerSize={0.15}
           color="#ffffff"
           activeColor="#ffffff"

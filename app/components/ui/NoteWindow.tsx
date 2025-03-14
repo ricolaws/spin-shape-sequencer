@@ -38,9 +38,9 @@ const NoteWindow: React.FC<NoteWindowProps> = ({ className = "" }) => {
 
   // Calculate metrics for note slots and window
   const totalSteps = state.events.notes.length; // Total number of notes (16)
-  const stepWidth = (dimensions.width * 0.9) / totalSteps; // 90% of width divided by steps
+  const stepWidth = (dimensions.width * 0.8) / totalSteps; // 90% of width divided by steps
   const stepHeight = stepWidth * 1.5; // Height of each note slot
-  const spacing = (dimensions.width * 0.1) / (totalSteps + 1); // 10% of width for spacing
+  const spacing = (dimensions.width * 0.2) / (totalSteps + 1);
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!containerRef.current) return;
@@ -84,7 +84,7 @@ const NoteWindow: React.FC<NoteWindowProps> = ({ className = "" }) => {
   return (
     <div
       ref={containerRef}
-      className={`relative w-full h-32 bg-gray-800 rounded-md overflow-hidden ${className}`}
+      className={`relative w-full h-32 bg-[#c1c1c1] rounded-md overflow-hidden ${className}`}
       onClick={handleClick}
     >
       {dimensions.width > 0 && (
@@ -115,7 +115,7 @@ const NoteWindow: React.FC<NoteWindowProps> = ({ className = "" }) => {
 
           {/* Highlight window for active events */}
           <div
-            className="absolute border-2 border-blue-500 rounded-sm pointer-events-none z-10"
+            className="absolute border-4 border-stone-700 rounded-sm pointer-events-none z-10"
             style={{
               left:
                 spacing +
