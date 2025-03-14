@@ -127,10 +127,12 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
 
-    // Send each note data to RNBO
+    console.log("Syncing all note data to RNBO device");
+
+    // Send each note data to RNBO - using absolute indices
     state.events.notes.forEach((note, index) => {
       const event = new MessageEvent(TimeNow, "update_note", [
-        index,
+        index, // Absolute index in the sequence
         note.pitch,
         note.velocity,
       ]);
@@ -139,7 +141,35 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
       } catch (error) {
         console.error(`Error scheduling event for note ${index}:`, error);
       }
+
+      // Also update active state
+      const activeEvent = new MessageEvent(TimeNow, "update_active", [
+        index, // Absolute index in the sequence
+        state.events.active[index] ? 1 : 0,
+      ]);
+      try {
+        device.scheduleEvent(activeEvent);
+      } catch (error) {
+        console.error(
+          `Error scheduling active state for event ${index}:`,
+          error
+        );
+      }
     });
+
+    // Send the current start_index
+    const maxOffset = state.events.notes.length - state.numEvents;
+    const startIndex = Math.round(state.noteWindowOffset * maxOffset);
+
+    const startIndexEvent = new MessageEvent(TimeNow, "start_index", [
+      startIndex,
+    ]);
+    try {
+      device.scheduleEvent(startIndexEvent);
+      console.log(`Sent start_index: ${startIndex} to RNBO device`);
+    } catch (error) {
+      console.error(`Error sending start_index to RNBO device:`, error);
+    }
   };
 
   // Register a trigger listener (using useCallback to maintain stability)
@@ -178,12 +208,33 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
 
       // Send update to RNBO
       if (rnboDevice) {
-        const TimeNow = 0;
-        const event = new MessageEvent(TimeNow, "update_active", [
-          index,
-          newActive[index] ? 1 : 0,
-        ]);
-        rnboDevice.scheduleEvent(event);
+        // Calculate the RNBO index based on the window position
+        const maxOffset = state.events.notes.length - state.numEvents;
+        const startIndex = Math.round(state.noteWindowOffset * maxOffset);
+
+        // Only send the update if the toggled event is in the current window
+        if (index >= startIndex && index < startIndex + state.numEvents) {
+          const relativeIndex = index - startIndex;
+
+          const TimeNow = 0;
+          const event = new MessageEvent(TimeNow, "update_active", [
+            relativeIndex, // RNBO expects relative indices
+            newActive[index] ? 1 : 0,
+          ]);
+          rnboDevice.scheduleEvent(event);
+
+          console.log(
+            `Sent update_active: [${relativeIndex}, ${
+              newActive[index] ? 1 : 0
+            }] to RNBO (from absolute index ${index})`
+          );
+        } else {
+          // Event is outside current window - update the full sequence in RNBO
+          // This can be implemented if needed
+          console.log(
+            `Event ${index} toggled but is outside current window, not sending to RNBO`
+          );
+        }
       }
 
       return newState;
@@ -231,30 +282,26 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
   // Trigger visual event and notify listeners (using useCallback)
   const triggerEvent = useCallback(
     (index: number) => {
-      if (index < 0 || index >= state.visualEvents.length) return;
-
-      // Calculate the actual visual event index based on window offset
-      const maxOffset = state.events.notes.length - state.numEvents;
-      const startIndex = Math.round(state.noteWindowOffset * maxOffset);
-      const adjustedIndex = startIndex + index;
-
-      // Make sure we're not out of bounds
-      if (adjustedIndex >= state.visualEvents.length) {
-        console.warn(`Adjusted index ${adjustedIndex} is out of bounds`);
+      // The index from RNBO is now an absolute index in the sequence
+      // We just need to make sure it's in range for the visual events
+      if (index < 0 || index >= state.visualEvents.length) {
+        console.warn(
+          `Trigger index ${index} out of range (0-${
+            state.visualEvents.length - 1
+          })`
+        );
         return;
       }
 
-      // First update our internal state
+      // Update our internal state (visual feedback)
       setState((prev) => {
         // Only update if the event is active
-        if (prev.events.active[adjustedIndex]) {
+        if (prev.events.active[index]) {
           const newVisualEvents = [...prev.visualEvents];
-          if (newVisualEvents[adjustedIndex]) {
+          if (newVisualEvents[index]) {
             // Call the trigger method on the Event object
-            newVisualEvents[adjustedIndex].trigger();
-            console.log(
-              `Event ${adjustedIndex} triggered in SequencerProvider`
-            );
+            newVisualEvents[index].trigger();
+            console.log(`Event ${index} triggered in SequencerProvider`);
           }
 
           return {
@@ -265,15 +312,24 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
         return prev;
       });
 
-      // Then notify all registered listeners with the original index
-      // This ensures the ring visualization still works as expected
-      triggerListeners.forEach((listener) => {
-        try {
-          listener.onTrigger(index);
-        } catch (err) {
-          console.error("Error in trigger listener:", err);
-        }
-      });
+      // For the ring visualization, we need to convert the absolute index
+      // to a relative index within the current window
+      const maxOffset = state.events.notes.length - state.numEvents;
+      const startIndex = Math.round(state.noteWindowOffset * maxOffset);
+
+      // Only trigger ring visualization if the event is in the current window
+      if (index >= startIndex && index < startIndex + state.numEvents) {
+        const relativeIndex = index - startIndex;
+
+        // Notify all registered listeners with the relative index
+        triggerListeners.forEach((listener) => {
+          try {
+            listener.onTrigger(relativeIndex);
+          } catch (err) {
+            console.error("Error in trigger listener:", err);
+          }
+        });
+      }
     },
     [
       state.visualEvents,
@@ -301,7 +357,6 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
     [state.events.notes.length]
   );
 
-  // Set the note window offset position (0-1)
   const setNoteWindowOffset = useCallback(
     (offset: number) => {
       const validOffset = Math.max(0, Math.min(1, offset));
@@ -318,46 +373,20 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
         noteWindowOffset: validOffset,
       }));
 
-      // Update RNBO device with new note values for the visible events
+      // Send start_index message to RNBO device
       if (rnboDevice) {
-        // Get the notes that will be visible in the window
-        const visibleNotes = state.events.notes.slice(
-          startIndex,
-          startIndex + state.numEvents
-        );
-        const visibleActive = state.events.active.slice(
-          startIndex,
-          startIndex + state.numEvents
-        );
+        // Create a message event with the starting index
+        const event = new MessageEvent(TimeNow, "start_index", [startIndex]);
 
-        // Send the note values to RNBO
-        for (let i = 0; i < state.numEvents; i++) {
-          if (i < visibleNotes.length) {
-            // Update the note value in RNBO
-            const event = new MessageEvent(TimeNow, "update_note", [
-              i, // local index in RNBO
-              visibleNotes[i].pitch,
-              visibleNotes[i].velocity,
-            ]);
-            rnboDevice.scheduleEvent(event);
-
-            // Update active state
-            const activeEvent = new MessageEvent(TimeNow, "update_active", [
-              i, // local index in RNBO
-              visibleActive[i] ? 1 : 0,
-            ]);
-            rnboDevice.scheduleEvent(activeEvent);
-          }
+        try {
+          rnboDevice.scheduleEvent(event);
+          console.log(`Sent start_index: ${startIndex} to RNBO device`);
+        } catch (error) {
+          console.error(`Error sending start_index to RNBO device:`, error);
         }
       }
     },
-    [
-      state.events.notes.length,
-      state.numEvents,
-      state.events.notes,
-      state.events.active,
-      rnboDevice,
-    ]
+    [state.events.notes.length, state.numEvents, rnboDevice]
   );
 
   // Return context with all functions

@@ -101,6 +101,11 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
           }
         }
 
+        // Send initial start_index of 0
+        if (typeof setNoteWindowOffsetRef.current === "function") {
+          setNoteWindowOffsetRef.current(0);
+        }
+
         // Filter parameters to only include those in DISPLAY_PARAMETERS list
         const filteredParams = device.parameters.filter((p) =>
           DISPLAY_PARAMETERS.includes(p.name)
@@ -127,7 +132,9 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
           if (ev.tag === "angle") {
             if (onAngleChangeRef.current) onAngleChangeRef.current(ev.payload);
           } else if (ev.tag === "trigger") {
+            // The eventIndex is already adjusted by the RNBO device to account for the start_index
             const eventIndex = ev.payload;
+
             // Trigger the event through the context
             if (typeof triggerEventRef.current === "function") {
               triggerEventRef.current(eventIndex);

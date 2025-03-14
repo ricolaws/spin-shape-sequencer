@@ -30,11 +30,11 @@ const SeqRingWrapper: React.FC<SeqRingWrapperProps> = ({
     }
 
     const listener = {
-      onTrigger: (index: number) => {
-        // Only process triggers for events that are within our displayed range
-        if (index >= 0 && index < state.numEvents) {
+      onTrigger: (relativeIndex: number) => {
+        // The index is now relative to the window - directly usable by SeqRing
+        if (relativeIndex >= 0 && relativeIndex < state.numEvents) {
           if (ringRef.current) {
-            ringRef.current.triggerEvent(index);
+            ringRef.current.triggerEvent(relativeIndex);
           }
         }
       },
@@ -70,7 +70,7 @@ const SeqRingWrapper: React.FC<SeqRingWrapperProps> = ({
     <SeqRing
       ref={ringRef}
       radius={radius}
-      eventCount={state.numEvents} // Use numEvents instead of notes.length
+      eventCount={state.numEvents}
       markerSize={markerSize}
       color={color}
       activeColor={activeColor}
