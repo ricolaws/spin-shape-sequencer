@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useRef,
 } from "react";
 import { MessageEvent, TimeNow } from "@rnbo/js";
 import { Event } from "../components/Event";
@@ -110,13 +111,28 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   });
 
-  // Sync to RNBO when component mounts
+  const initialSyncDoneRef = useRef(false);
+
+  // Track the previous device reference
+  const prevDeviceRef = useRef<any>(null);
+
+  // Sync to RNBO when device first becomes available
   useEffect(() => {
     if (!rnboDevice) return;
 
-    // Send initial data to RNBO
-    syncToRNBO(state, rnboDevice);
-  }, [rnboDevice, state]); // Only run when RNBO device is available
+    // Determine if this is a new device or the initial connection
+    const isNewDevice = prevDeviceRef.current !== rnboDevice;
+    prevDeviceRef.current = rnboDevice;
+
+    // Sync in these cases:
+    // 1. First time we get a device
+    // 2. Device reference changes
+    if (isNewDevice || !initialSyncDoneRef.current) {
+      console.log("Performing sync to RNBO device");
+      syncToRNBO(state, rnboDevice);
+      initialSyncDoneRef.current = true;
+    }
+  }, [rnboDevice, state]);
 
   // Function to sync state to RNBO
   const syncToRNBO = (state: SequencerState, device: any) => {
