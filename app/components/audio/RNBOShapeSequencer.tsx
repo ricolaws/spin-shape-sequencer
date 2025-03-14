@@ -27,7 +27,13 @@ const DISPLAY_PARAMETERS = [
 const FLOAT_PARAMETERS = ["speed", "tone", "balance"];
 
 const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
-  const { setRnboDevice, triggerEvent, setNumEvents } = useSequencer();
+  const {
+    state,
+    setRnboDevice,
+    triggerEvent,
+    setNumEvents,
+    setNoteWindowOffset,
+  } = useSequencer();
   const [parameters, setParameters] = useState<Parameter[]>([]);
   const [deviceStatus, setDeviceStatus] = useState("Initializing...");
   const messageSubscriptionRef = useRef<{ unsubscribe: () => void } | null>(
@@ -39,6 +45,7 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
   const setRnboDeviceRef = useRef(setRnboDevice);
   const triggerEventRef = useRef(triggerEvent);
   const setNumEventsRef = useRef(setNumEvents);
+  const setNoteWindowOffsetRef = useRef(setNoteWindowOffset);
   const onAngleChangeRef = useRef(onAngleChange);
   const onNumCornersChangeRef = useRef(onNumCornersChange);
 
@@ -49,12 +56,14 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
     setRnboDeviceRef.current = setRnboDevice;
     triggerEventRef.current = triggerEvent;
     setNumEventsRef.current = setNumEvents;
+    setNoteWindowOffsetRef.current = setNoteWindowOffset;
   }, [
     onAngleChange,
     onNumCornersChange,
     setRnboDevice,
     triggerEvent,
     setNumEvents,
+    setNoteWindowOffset,
   ]);
 
   useEffect(() => {
@@ -171,6 +180,18 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
         ) {
           // We don't need to sync to RNBO since the slider already did that
           setNumEventsRef.current(Math.round(value));
+
+          // When numEvents changes, we need to ensure the window offset is still valid
+          // If the window offset would cause events to go out of bounds, adjust it
+          const device = await getOrCreateDevice(setDeviceStatus);
+          if (device && typeof setNoteWindowOffsetRef.current === "function") {
+            const maxOffset =
+              device.parameters.find((p) => p.name === "numEvents")?.value || 0;
+            if (maxOffset > 0) {
+              // Check and possibly adjust the window offset
+              setNoteWindowOffsetRef.current(state.noteWindowOffset);
+            }
+          }
         }
       }
     } catch (err) {
@@ -211,7 +232,7 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
         />
       );
     });
-  }, [parameters]);
+  }, [parameters, state.noteWindowOffset]);
 
   return (
     <div className="p-4 border rounded-md bg-[#282828] text-white">

@@ -26,6 +26,7 @@ interface SequencerState {
   };
   visualEvents: Event[]; // Array of Event objects for visual representation
   numEvents: number; // Number of events to display
+  noteWindowOffset: number; // Position of the note window (0 to 1)
 }
 
 // Create context with updated type definition
@@ -37,6 +38,7 @@ const SequencerContext = createContext<{
   triggerEvent: (index: number) => void;
   registerTriggerListener: (listener: TriggerListener) => () => void;
   setNumEvents: (num: number) => void;
+  setNoteWindowOffset: (offset: number) => void;
 }>(null!);
 
 // Hook for using the sequencer context
@@ -104,6 +106,7 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
       },
       visualEvents: visualEvents,
       numEvents: initialNotes.length, // Default to showing all events
+      noteWindowOffset: 0, // Start at the beginning (0%)
     };
   });
 
@@ -230,16 +233,28 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
     (index: number) => {
       if (index < 0 || index >= state.visualEvents.length) return;
 
+      // Calculate the actual visual event index based on window offset
+      const maxOffset = state.events.notes.length - state.numEvents;
+      const startIndex = Math.round(state.noteWindowOffset * maxOffset);
+      const adjustedIndex = startIndex + index;
+
+      // Make sure we're not out of bounds
+      if (adjustedIndex >= state.visualEvents.length) {
+        console.warn(`Adjusted index ${adjustedIndex} is out of bounds`);
+        return;
+      }
+
       // First update our internal state
       setState((prev) => {
         // Only update if the event is active
-        if (prev.events.active[index]) {
+        if (prev.events.active[adjustedIndex]) {
           const newVisualEvents = [...prev.visualEvents];
-          if (newVisualEvents[index]) {
+          if (newVisualEvents[adjustedIndex]) {
             // Call the trigger method on the Event object
-            newVisualEvents[index].trigger();
-
-            // console.log(`Event ${index} triggered in SequencerProvider`);
+            newVisualEvents[adjustedIndex].trigger();
+            console.log(
+              `Event ${adjustedIndex} triggered in SequencerProvider`
+            );
           }
 
           return {
@@ -250,7 +265,8 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
         return prev;
       });
 
-      // Then notify all registered listeners
+      // Then notify all registered listeners with the original index
+      // This ensures the ring visualization still works as expected
       triggerListeners.forEach((listener) => {
         try {
           listener.onTrigger(index);
@@ -259,7 +275,13 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       });
     },
-    [state.visualEvents, triggerListeners]
+    [
+      state.visualEvents,
+      triggerListeners,
+      state.noteWindowOffset,
+      state.numEvents,
+      state.events.notes.length,
+    ]
   );
 
   // Set the number of events to display
@@ -279,6 +301,65 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
     [state.events.notes.length]
   );
 
+  // Set the note window offset position (0-1)
+  const setNoteWindowOffset = useCallback(
+    (offset: number) => {
+      const validOffset = Math.max(0, Math.min(1, offset));
+      console.log(`Setting noteWindowOffset to ${validOffset}`);
+
+      // Calculate the starting index based on the offset
+      const maxOffset = state.events.notes.length - state.numEvents;
+      const startIndex = Math.round(validOffset * maxOffset);
+
+      console.log(`Window now starts at index ${startIndex}`);
+
+      setState((prev) => ({
+        ...prev,
+        noteWindowOffset: validOffset,
+      }));
+
+      // Update RNBO device with new note values for the visible events
+      if (rnboDevice) {
+        // Get the notes that will be visible in the window
+        const visibleNotes = state.events.notes.slice(
+          startIndex,
+          startIndex + state.numEvents
+        );
+        const visibleActive = state.events.active.slice(
+          startIndex,
+          startIndex + state.numEvents
+        );
+
+        // Send the note values to RNBO
+        for (let i = 0; i < state.numEvents; i++) {
+          if (i < visibleNotes.length) {
+            // Update the note value in RNBO
+            const event = new MessageEvent(TimeNow, "update_note", [
+              i, // local index in RNBO
+              visibleNotes[i].pitch,
+              visibleNotes[i].velocity,
+            ]);
+            rnboDevice.scheduleEvent(event);
+
+            // Update active state
+            const activeEvent = new MessageEvent(TimeNow, "update_active", [
+              i, // local index in RNBO
+              visibleActive[i] ? 1 : 0,
+            ]);
+            rnboDevice.scheduleEvent(activeEvent);
+          }
+        }
+      }
+    },
+    [
+      state.events.notes.length,
+      state.numEvents,
+      state.events.notes,
+      state.events.active,
+      rnboDevice,
+    ]
+  );
+
   // Return context with all functions
   return (
     <SequencerContext.Provider
@@ -290,6 +371,7 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
         triggerEvent,
         registerTriggerListener,
         setNumEvents,
+        setNoteWindowOffset,
       }}
     >
       {children}

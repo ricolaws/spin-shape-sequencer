@@ -4,6 +4,7 @@ import { useState } from "react";
 import Scene from "./components/Scene";
 import RNBOShapeSequencer from "./components/audio/RNBOShapeSequencer";
 import { SequencerProvider } from "./context/SequencerProvider";
+import NoteWindow from "./components/ui/NoteWindow";
 
 export default function Home() {
   const [sides, setSides] = useState(5);
@@ -28,6 +29,7 @@ export default function Home() {
             onAngleChange={handleAngleChange}
             onNumCornersChange={handleSidesChange}
           />
+          <NoteWindow className="mb-8" />
           <Scene sides={sides} angleOfRotation={angleOfRotation} />
         </SequencerProvider>
       </main>
