@@ -72,8 +72,6 @@ const SeqRing = forwardRef<RingRef, SeqRingProps>(
       radius,
       noteValues: noteValues.map((n) => n).join(","),
     });
-
-    // Separate state for events to avoid unnecessary recreations
     const [events, setEvents] = useState<Event[]>([]);
 
     // Refs for Three.js objects
@@ -85,7 +83,6 @@ const SeqRing = forwardRef<RingRef, SeqRingProps>(
       return createCircleGeometry(radius, segments);
     }, [radius, segments]);
 
-    // Keep the geometry ref updated
     useEffect(() => {
       geometryRef.current = circleGeometry;
     }, [circleGeometry]);
@@ -131,7 +128,7 @@ const SeqRing = forwardRef<RingRef, SeqRingProps>(
       const newEvents: Event[] = [];
 
       for (let i = 0; i < eventCount; i++) {
-        const noteValue = noteValues[i] || 60 + i; // Default to C4 + offset if not provided
+        const noteValue = noteValues[i] || 60 + i;
         const active =
           initialActiveEvents[i] !== undefined ? initialActiveEvents[i] : false;
 
@@ -154,32 +151,72 @@ const SeqRing = forwardRef<RingRef, SeqRingProps>(
       hasStructuralPropsChanged,
     ]);
 
-    // We're DISABLING this effect that was causing the circular updates.
-    // The parent (SequencerProvider) should now be the single source of truth for active states.
-    // The local events will be updated only when the initialActiveEvents prop changes
-    // during initialization or when structure changes.
+    useEffect(() => {
+      if (!isInitializedRef.current) {
+        return;
+      }
 
-    // Initialize events with active states, but don't update them based on prop changes
-    // We'll let the parent handle active state changes and SequencerProvider will have
-    // the authoritative state
+      // Update active states for existing events
+      const eventsNeedUpdate = events.some((event, index) => {
+        const newActiveState =
+          initialActiveEvents[index] !== undefined
+            ? initialActiveEvents[index]
+            : false;
+        return event.active !== newActiveState;
+      });
+
+      if (eventsNeedUpdate) {
+        logger.log("SeqRing: Updating active states from initialActiveEvents");
+
+        setEvents((prevEvents) =>
+          prevEvents.map((event, index) => {
+            const newActiveState =
+              initialActiveEvents[index] !== undefined
+                ? initialActiveEvents[index]
+                : false;
+
+            if (event.active !== newActiveState) {
+              const updatedEvent = new Event(
+                event.index,
+                event.noteValue,
+                newActiveState
+              );
+              updatedEvent.position = event.position;
+              return updatedEvent;
+            }
+            return event;
+          })
+        );
+      }
+    }, [initialActiveEvents]);
 
     // Handle event click with useCallback to maintain reference stability
     const handleEventClick = useCallback(
       (index: number) => {
         logger.log(`SeqRing received click for event ${index}`);
 
-        // Instead of toggling the event directly and then calling the callback,
-        // we'll only call the callback and let parent handle the state
         if (onEventToggle) {
-          // Get the current active state of the event
           const currentActive = events[index]?.active || false;
 
-          // Call the parent's toggle function with the CURRENT state
-          // so it knows what to toggle it to
           onEventToggle(index, !currentActive);
 
           logger.log(
             `Event ${index} requested toggle from ${currentActive} to ${!currentActive}`
+          );
+
+          setEvents((prevEvents) =>
+            prevEvents.map((event, i) => {
+              if (i === index) {
+                const updatedEvent = new Event(
+                  event.index,
+                  event.noteValue,
+                  !event.active
+                );
+                updatedEvent.position = event.position;
+                return updatedEvent;
+              }
+              return event;
+            })
           );
         }
       },
@@ -190,7 +227,6 @@ const SeqRing = forwardRef<RingRef, SeqRingProps>(
     const triggerEvent = useCallback(
       (index: number) => {
         if (index >= 0 && index < events.length) {
-          // Directly trigger the event without unnecessary state updates
           if (events[index]) {
             const triggered = events[index].trigger();
             logger.log(
@@ -252,7 +288,6 @@ const SeqRing = forwardRef<RingRef, SeqRingProps>(
   }
 );
 
-// Add display name to fix eslint warning
 SeqRing.displayName = "SeqRing";
 
 export default React.memo(SeqRing);
