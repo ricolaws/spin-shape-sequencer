@@ -1,6 +1,7 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useCallback, memo } from "react";
 import { useSequencer } from "../../context/SequencerProvider";
 import SeqRing, { RingRef } from "./SeqRing";
+import { logger } from "../DebugLogger";
 
 interface SeqRingWrapperProps {
   radius?: number;
@@ -25,7 +26,7 @@ const SeqRingWrapper: React.FC<SeqRingWrapperProps> = ({
   // Register as a trigger listener
   useEffect(() => {
     if (!registerTriggerListener) {
-      console.warn("registerTriggerListener is not available");
+      logger.warn("registerTriggerListener is not available");
       return;
     }
 
@@ -59,12 +60,20 @@ const SeqRingWrapper: React.FC<SeqRingWrapperProps> = ({
   );
 
   // Create a handler that adjusts the index based on window position
-  const handleEventToggle = (localIndex: number) => {
-    const actualIndex = startIndex + localIndex;
-    if (actualIndex < state.events.active.length) {
-      toggleEvent(actualIndex);
-    }
-  };
+  const handleEventToggle = useCallback(
+    (localIndex: number, newActiveState: boolean) => {
+      const actualIndex = startIndex + localIndex;
+      if (actualIndex < state.events.active.length) {
+        // IMPORTANT: We call toggleEvent with the new state directly
+        // This ensures SequencerProvider knows exactly what state we want
+        logger.log(
+          `SeqRingWrapper: Toggling event ${actualIndex} to ${newActiveState}`
+        );
+        toggleEvent(actualIndex, newActiveState);
+      }
+    },
+    [startIndex, state.events.active.length, toggleEvent]
+  );
 
   return (
     <SeqRing
@@ -83,4 +92,4 @@ const SeqRingWrapper: React.FC<SeqRingWrapperProps> = ({
   );
 };
 
-export default SeqRingWrapper;
+export default memo(SeqRingWrapper);

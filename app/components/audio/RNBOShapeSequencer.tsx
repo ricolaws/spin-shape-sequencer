@@ -5,6 +5,7 @@ import { getOrCreateDevice } from "./RNBOCore";
 import VolumeControl from "../ui/VolumeControl";
 import ParameterSlider from "../ui/ParameterSlider";
 import { useSequencer } from "../../context/SequencerProvider";
+import { logger } from "../DebugLogger";
 
 interface Props {
   onAngleChange?: (angle: number) => void;
@@ -142,7 +143,7 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
           }
         });
       } catch (err) {
-        console.error("Error in component setup:", err);
+        logger.error("Error in component setup:", err);
         setDeviceStatus(
           `Error: ${err instanceof Error ? err.message : String(err)}`
         );
@@ -202,7 +203,7 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
         }
       }
     } catch (err) {
-      console.error("Error changing parameter:", err);
+      logger.error("Error changing parameter:", err);
     }
   };
 

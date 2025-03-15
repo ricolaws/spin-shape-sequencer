@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useCallback, memo } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
 import * as THREE from "three";
@@ -20,96 +20,65 @@ const EventMarker: React.FC<EventMarkerProps> = ({
   size = 0.2,
   activeColor = "#ffffff",
   inactiveColor = "#666666",
-  triggerColor = "#ffaa00",
+  triggerColor = "#ff4500",
   onEventClick,
-  onEventHover,
 }) => {
   const markerRef = useRef<THREE.Mesh>(null);
   const triggerRef = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
-  const [localActive, setLocalActive] = useState(event.active);
-  const [debugTriggered, setDebugTriggered] = useState(false);
 
-  // Debug logging for event properties
-  useEffect(() => {
-    if (event.triggered && !debugTriggered) {
-      setDebugTriggered(true);
-    } else if (!event.triggered && debugTriggered) {
-      setDebugTriggered(false);
-    }
-  }, [event.triggered, event.triggerOpacity, event.index, debugTriggered]);
+  // Handle click event
+  const handleClick = useCallback(
+    (e: ThreeEvent<MouseEvent>) => {
+      e.stopPropagation();
+      if (onEventClick) {
+        onEventClick(event.index);
+      }
+    },
+    [event, onEventClick]
+  );
 
-  // Sync local active state with event object
-  useEffect(() => {
-    setLocalActive(event.active);
-  }, [event.active]);
+  // Handle hover
+  const handlePointerOver = useCallback(() => setHovered(true), []);
+  const handlePointerOut = useCallback(() => setHovered(false), []);
 
-  // Handle hovering
-  useEffect(() => {
-    event.hovered = hovered;
-    if (onEventHover) {
-      onEventHover(event.index, hovered);
-    }
-  }, [event, hovered, onEventHover]);
-
-  // Animation frame update
+  // Animation frame update for trigger effect
   useFrame(() => {
     if (event.triggered && triggerRef.current) {
-      // For triggered animation pulse
-      triggerRef.current.scale.x = 1 + event.triggerOpacity * 0.5;
-      triggerRef.current.scale.y = 1 + event.triggerOpacity * 0.5;
-      triggerRef.current.scale.z = 1 + event.triggerOpacity * 0.5;
+      // Get the animation progress from 1 down to 0
+      const animationProgress = Math.max(0, event.triggerOpacity);
+      const scale = 0.5 + animationProgress;
 
-      // Fade out trigger effect
-      if (event.triggerOpacity > 0) {
-        event.triggerOpacity -= 0.02;
-      } else {
+      triggerRef.current.scale.set(scale, scale, scale);
+      event.triggerOpacity -= 0.04;
+
+      // End the animation when opacity is low enough
+      if (event.triggerOpacity <= 0) {
+        event.triggerOpacity = 0;
         event.endTrigger();
+      }
+
+      // Force update
+      if (markerRef.current) {
+        markerRef.current.updateMatrix();
       }
     }
   });
 
-  const handleClick = (e: ThreeEvent<MouseEvent>) => {
-    e.stopPropagation(); // Prevent click from propagating
+  // Get colors based on active state
+  const getColor = useCallback(() => {
+    return event.active ? activeColor : inactiveColor;
+  }, [event.active, activeColor, inactiveColor]);
 
-    // Update local state immediately for visual feedback
-    setLocalActive(!localActive);
-
-    // Call the parent handler to update the actual event
-    if (onEventClick) {
-      onEventClick(event.index);
-    }
-
-    // Log for debugging
-    console.log(
-      `Clicked event ${
-        event.index
-      }, new active state should be: ${!localActive}`
-    );
-  };
-
-  const getColor = () => {
-    if (!localActive) return inactiveColor;
-    return activeColor;
-  };
-
-  // Get text color based on active state
-  const getTextColor = () => {
-    if (localActive) {
-      return "#000000"; // Black text for active events
-    } else {
-      return "#ffffff"; // White text for inactive events
-    }
-  };
+  const getTextColor = useCallback(() => {
+    return event.active ? "#000000" : "#ffffff";
+  }, [event.active]);
 
   return (
     <group position={event.position}>
-      {/* Trigger effect circle (only visible when triggered) */}
+      {/* Trigger effect circle */}
       {event.triggered && (
-        <mesh
-          ref={triggerRef}
-          position={[0, 0, -0.01]} // Slightly behind the main marker
-        >
+        <mesh ref={triggerRef} position={[0, 0, -0.01]}>
           <circleGeometry args={[size * 1.2, 32]} />
           <meshBasicMaterial
             color={triggerColor}
@@ -123,8 +92,8 @@ const EventMarker: React.FC<EventMarkerProps> = ({
       <mesh
         ref={markerRef}
         onClick={handleClick}
-        onPointerOver={() => setHovered(true)}
-        onPointerOut={() => setHovered(false)}
+        onPointerOver={handlePointerOver}
+        onPointerOut={handlePointerOut}
       >
         <circleGeometry args={[size, 32]} />
         <meshBasicMaterial color={getColor()} />
@@ -132,7 +101,7 @@ const EventMarker: React.FC<EventMarkerProps> = ({
 
       {/* Note value text */}
       <Text
-        position={[0, 0, 0.01]} // Slightly in front of the circle
+        position={[0, 0, 0.01]}
         fontSize={size * 0.8}
         color={getTextColor()}
         anchorX="center"
@@ -152,4 +121,4 @@ const EventMarker: React.FC<EventMarkerProps> = ({
   );
 };
 
-export default EventMarker;
+export default memo(EventMarker);

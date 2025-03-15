@@ -1,3 +1,5 @@
+import { logger } from "./DebugLogger";
+
 export class Event {
   index: number;
   active: boolean;
@@ -24,12 +26,17 @@ export class Event {
     if (this.active) {
       this.triggered = true;
       this.triggerOpacity = 1;
+      logger.log(
+        `[Event ${this.index} triggered, opacity set to ${this.triggerOpacity}`
+      );
       return true;
     }
     return false;
   }
 
   endTrigger(): void {
+    logger.log(`Event ${this.index} trigger ended.`);
+
     this.triggered = false;
     this.triggerOpacity = 0;
   }
