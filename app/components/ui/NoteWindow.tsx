@@ -1,13 +1,17 @@
-/**
- * NoteWindow component displays all the notes in the sequence and provides a
- * visual representation of the "window" of currently active notes.
- *
- * It allows clicking to position the window, which determines which notes are
- * shown in the ring sequencer.
- */
 import React, { useEffect, useRef, useState } from "react";
 import { useSequencer } from "../../context/SequencerProvider";
 import NoteSlot from "./NoteSlot";
+
+// - formula for calculating highlight window width:
+// - All slot widths: numEvents * stepWidth
+// - All internal spacings + Half spacing on each end + 2px for CSS border
+const calculateHighlightWidth = (
+  numEvents: number,
+  stepWidth: number,
+  spacing: number
+): number => {
+  return numEvents * stepWidth + (numEvents - 1) * spacing + spacing + 2;
+};
 
 interface NoteWindowProps {
   className?: string;
@@ -37,10 +41,10 @@ const NoteWindow: React.FC<NoteWindowProps> = ({ className = "" }) => {
   }, []);
 
   // Calculate metrics for note slots and window
-  const totalSteps = state.events.notes.length; // Total number of notes (16)
-  const stepWidth = (dimensions.width * 0.8) / totalSteps; // 90% of width divided by steps
-  const stepHeight = stepWidth * 1.5; // Height of each note slot
-  const spacing = (dimensions.width * 0.2) / (totalSteps + 1);
+  const totalSteps = state.events.notes.length;
+  const stepWidth = (dimensions.width * 0.75) / totalSteps;
+  const stepHeight = stepWidth * 1.5;
+  const spacing = (dimensions.width * 0.25) / (totalSteps + 1);
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!containerRef.current) return;
@@ -61,16 +65,12 @@ const NoteWindow: React.FC<NoteWindowProps> = ({ className = "" }) => {
       if (maxStartIndex <= 0) {
         return; // Can't move if window size equals or exceeds total steps
       }
-
-      // Determine the new starting index
       let newStartIndex = clickedStep;
 
-      // Make sure the window doesn't go beyond the end
       if (newStartIndex + state.numEvents > totalSteps) {
         newStartIndex = totalSteps - state.numEvents;
       }
 
-      // Calculate offset (between 0-1)
       const newOffset = newStartIndex / maxStartIndex;
       console.log(
         `New window offset: ${newOffset}, starting at index ${newStartIndex}`
@@ -118,12 +118,17 @@ const NoteWindow: React.FC<NoteWindowProps> = ({ className = "" }) => {
             className="absolute border-4 border-stone-700 rounded-sm pointer-events-none z-10"
             style={{
               left:
-                spacing +
+                spacing -
+                spacing / 2 +
                 state.noteWindowOffset *
                   (totalSteps - state.numEvents) *
                   (stepWidth + spacing),
               top: (dimensions.height - stepHeight - spacing) / 2,
-              width: state.numEvents * (stepWidth + spacing) - spacing,
+              width: calculateHighlightWidth(
+                state.numEvents,
+                stepWidth,
+                spacing
+              ),
               height: stepHeight + spacing,
               transition: "left 0.3s ease-out",
             }}
