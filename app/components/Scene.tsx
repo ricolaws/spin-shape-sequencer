@@ -34,14 +34,7 @@ const Scene: React.FC<SceneProps> = ({ sides, angleOfRotation }) => {
           roughness={0.5}
           angleOfRotation={angleOfRotation}
         />
-        <SeqRingWrapper
-          radius={2.3}
-          markerSize={0.15}
-          color="#ffffff"
-          activeColor="#ffffff"
-          inactiveColor="#666666"
-          triggerColor="#ff4500"
-        />
+        <SeqRingWrapper radius={2.3} markerSize={0.15} />
         <EffectComposer>
           <Bloom
             intensity={0.12}

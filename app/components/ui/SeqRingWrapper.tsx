@@ -2,28 +2,20 @@ import React, { useRef, useEffect, useCallback, memo } from "react";
 import { useSequencer } from "../../context/SequencerProvider";
 import SeqRing, { RingRef } from "./SeqRing";
 import { logger } from "../DebugLogger";
+import { colors } from "../../../app/styles/colors";
 
 interface SeqRingWrapperProps {
   radius?: number;
   markerSize?: number;
-  color?: string;
-  activeColor?: string;
-  inactiveColor?: string;
-  triggerColor?: string;
 }
 
 const SeqRingWrapper: React.FC<SeqRingWrapperProps> = ({
   radius = 2.1,
   markerSize = 0.15,
-  color = "#ffffff",
-  activeColor = "#ffffff",
-  inactiveColor = "#555555",
-  triggerColor = "#ffaa00",
 }) => {
   const { state, toggleEvent, registerTriggerListener } = useSequencer();
   const ringRef = useRef<RingRef>(null);
 
-  // Register as a trigger listener
   useEffect(() => {
     if (!registerTriggerListener) {
       logger.warn("registerTriggerListener is not available");
@@ -81,10 +73,10 @@ const SeqRingWrapper: React.FC<SeqRingWrapperProps> = ({
       radius={radius}
       eventCount={state.numEvents}
       markerSize={markerSize}
-      color={color}
-      activeColor={activeColor}
-      inactiveColor={inactiveColor}
-      triggerColor={triggerColor}
+      color={colors.marker.active}
+      activeColor={colors.marker.active}
+      inactiveColor={colors.marker.inactive}
+      triggerColor={colors.primary}
       noteValues={visibleNotes.map((note) => note.pitch)}
       initialActiveEvents={visibleActive}
       onEventToggle={handleEventToggle}
