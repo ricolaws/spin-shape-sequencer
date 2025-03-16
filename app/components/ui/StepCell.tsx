@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 
 interface StepCellProps {
   index: number;
@@ -31,96 +31,109 @@ const StepCell: React.FC<StepCellProps> = ({
   cellBGColor = "#323232",
   onValueChange,
 }) => {
-  // Use refs to track internal state without triggers re-renders
+  const [liveValue, setLiveValue] = useState(value);
   const isDragging = useRef(false);
-  const startY = useRef(0);
-  const startValue = useRef(0);
-  const currentValue = useRef(value);
+  const animationFrame = useRef<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Calculate the value's position in the cell (percentage from bottom)
   const valueRange = maxValue - minValue;
-  const valuePercentage = ((value - minValue) / valueRange) * 100;
+  const valuePercentage = ((liveValue - minValue) / valueRange) * 100;
   const barHeight = `${valuePercentage}%`;
-
-  // Determine the color based on active state
   const barColor = isActive ? activeStepColor : inactiveStepColor;
-
-  // Create transparent overlay when not in current window
   const opacity = inCurrentWindow ? 1 : 0.5;
+  const latestValue = useRef(value); // Track the most recent value
+  const startValue = useRef(value); // Store value at click
+  const startY = useRef(0); // Store Y position at click
+  const isClick = useRef(false); // Track whether it’s a click or a drag
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handlePointerDown = (e: React.PointerEvent) => {
     e.preventDefault();
-
     isDragging.current = true;
+    isClick.current = true; // Assume click initially
     startY.current = e.clientY;
     startValue.current = value;
-    currentValue.current = value;
 
-    console.log(`StepCell ${index} mousedown: Y=${e.clientY}`);
-
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
+    document.addEventListener("pointermove", handlePointerMove);
+    document.addEventListener("pointerup", handlePointerUp);
   };
 
-  const handleMouseMove = (e: MouseEvent) => {
+  const handlePointerMove = (e: PointerEvent) => {
     if (!isDragging.current) return;
 
-    // Log Y position
-    console.log(`StepCell ${index} mousemove: Y=${e.clientY}`);
-
-    // Calculate value change
     const deltaY = startY.current - e.clientY;
-    const pixelsPerStep = 3;
-    const valueChange = Math.round(deltaY / pixelsPerStep);
-    currentValue.current = Math.max(
-      minValue,
-      Math.min(maxValue, startValue.current + valueChange)
-    );
-  };
 
-  const handleMouseUp = (e: MouseEvent) => {
-    if (!isDragging.current) return;
-
-    console.log(`StepCell ${index} mouseup: Y=${e.clientY}`);
-
-    // Only trigger the change if value is different
-    if (currentValue.current !== value && onValueChange) {
-      console.log(
-        `StepCell ${index} value change: ${value} -> ${currentValue.current}`
-      );
-      onValueChange(index, currentValue.current);
+    // If movement exceeds a small threshold, treat as a drag
+    if (Math.abs(deltaY) > 3) {
+      isClick.current = false; // This is a drag now!
     }
 
-    isDragging.current = false;
-    document.removeEventListener("mousemove", handleMouseMove);
-    document.removeEventListener("mouseup", handleMouseUp);
+    if (!isClick.current && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const height = rect.height;
+
+      // Map movement to value range
+      const valueChange = (deltaY / height) * valueRange;
+      const newValue = Math.round(
+        Math.max(minValue, Math.min(maxValue, startValue.current + valueChange))
+      );
+
+      setLiveValue(newValue);
+      latestValue.current = newValue;
+    }
   };
 
-  // Clean up event listeners when component unmounts
+  const handlePointerUp = (e: PointerEvent) => {
+    if (!isDragging.current) return;
+    isDragging.current = false;
+
+    if (isClick.current) {
+      // CLICK: Set value directly to clicked position
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (rect) {
+        const relativeY = rect.bottom - e.clientY;
+        const newValue = Math.round(
+          minValue + (relativeY / height) * valueRange
+        );
+        const clampedValue = Math.max(minValue, Math.min(maxValue, newValue));
+
+        setLiveValue(clampedValue);
+        latestValue.current = clampedValue;
+      }
+    }
+
+    if (onValueChange) {
+      onValueChange(index, latestValue.current);
+    }
+
+    document.removeEventListener("pointermove", handlePointerMove);
+    document.removeEventListener("pointerup", handlePointerUp);
+  };
+
   useEffect(() => {
     return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("pointermove", handlePointerMove);
+      document.removeEventListener("pointerup", handlePointerUp);
+      if (animationFrame.current) cancelAnimationFrame(animationFrame.current);
     };
   }, []);
 
   return (
     <div
+      ref={containerRef}
       className="absolute flex flex-col justify-end"
       style={{
         left: x,
         bottom: 0,
-        width: width,
-        height: height,
+        width,
+        height,
         backgroundColor: cellBGColor,
         borderRadius: "2px",
-        opacity: opacity,
+        opacity,
         cursor: "ns-resize",
         border: "1px solid rgba(255,255,255,0.1)",
         userSelect: "none",
       }}
-      onMouseDown={handleMouseDown}
+      onPointerDown={handlePointerDown}
     >
       <div
         className="bar-value"
