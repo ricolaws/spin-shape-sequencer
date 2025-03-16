@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useSequencer } from "../../context/SequencerProvider";
 import NoteSlot from "./NoteSlot";
+import { logger } from "../utils/DebugLogger";
 
 // - formula for calculating highlight window width:
 // - All slot widths: numEvents * stepWidth
@@ -57,7 +58,7 @@ const NoteWindow: React.FC<NoteWindowProps> = ({ className = "" }) => {
 
     // Ensure we don't go out of bounds
     if (clickedStep >= 0 && clickedStep < totalSteps) {
-      console.log(`Clicked on step ${clickedStep}`);
+      logger.log(`Clicked on step ${clickedStep}`);
 
       // Calculate the new offset based on the clicked position
       const maxStartIndex = totalSteps - state.numEvents;
@@ -72,11 +73,10 @@ const NoteWindow: React.FC<NoteWindowProps> = ({ className = "" }) => {
       }
 
       const newOffset = newStartIndex / maxStartIndex;
-      console.log(
+      logger.log(
         `New window offset: ${newOffset}, starting at index ${newStartIndex}`
       );
 
-      // Update the offset in the context
       setNoteWindowOffset(newOffset);
     }
   };
@@ -84,7 +84,7 @@ const NoteWindow: React.FC<NoteWindowProps> = ({ className = "" }) => {
   return (
     <div
       ref={containerRef}
-      className={`relative w-full h-32 bg-[#c1c1c1] rounded-md overflow-hidden ${className}`}
+      className={`relative w-full h-32 bg-[var(--background)] rounded-md overflow-hidden ${className}`}
       onClick={handleClick}
     >
       {dimensions.width > 0 && (

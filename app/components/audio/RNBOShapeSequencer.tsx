@@ -5,7 +5,7 @@ import { getOrCreateDevice } from "./RNBOCore";
 import VolumeControl from "../ui/VolumeControl";
 import ParameterSlider from "../ui/ParameterSlider";
 import { useSequencer } from "../../context/SequencerProvider";
-import { logger } from "../DebugLogger";
+import { logger } from "../utils/DebugLogger";
 
 interface Props {
   onAngleChange?: (angle: number) => void;
@@ -20,12 +20,11 @@ const DISPLAY_PARAMETERS = [
   "noteLength",
   "Release",
   "partials",
-  "tone",
   "balance",
 ];
 
 // Define which parameters should use float values (all others use integers)
-const FLOAT_PARAMETERS = ["speed", "tone", "balance"];
+const FLOAT_PARAMETERS = ["speed", "balance"];
 
 const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
   const {
@@ -243,7 +242,7 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
   }, [parameters, state.noteWindowOffset]);
 
   return (
-    <div className="p-4 border rounded-md bg-[#282828] text-white">
+    <div className="w-1/2 p-4 border rounded-md bg-[var(--foreground)] text-white">
       <h2 className="text-xl font-semibold mb-2">RNBO Device</h2>
       <p className="text-sm text-gray-300 mb-4">{deviceStatus}</p>
       <VolumeControl />

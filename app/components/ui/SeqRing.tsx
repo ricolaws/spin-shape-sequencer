@@ -10,7 +10,7 @@ import React, {
 import * as THREE from "three";
 import EventMarker from "./EventMarker";
 import { Event } from "../Event";
-import { logger } from "../DebugLogger";
+import { logger } from "../utils/DebugLogger";
 
 interface SeqRingProps {
   radius?: number;

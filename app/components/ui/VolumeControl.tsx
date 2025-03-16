@@ -11,7 +11,7 @@ const VolumeControl: React.FC = () => {
 
   return (
     <div className="mb-6">
-      <div className="grid grid-cols-[auto_1fr_auto] gap-2 items-center">
+      <div className="grid grid-cols-[1fr_2fr_auto] gap-2 items-center">
         <label className="text-sm font-medium">Master Volume:</label>
         <input
           type="range"
@@ -20,9 +20,9 @@ const VolumeControl: React.FC = () => {
           step={0.01}
           value={volume}
           onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-          className="w-full accent-[#0099ff] h-2 rounded-lg appearance-none bg-[#ebebeb]"
+          className="w-full accent-[var(--primary)] h-2 rounded-lg appearance-none bg-[var(--secondary)]"
         />
-        <span className="text-sm w-12 text-right">
+        <span className="text-sm w-20 text-center">
           {Math.round(volume * 100)}%
         </span>
       </div>

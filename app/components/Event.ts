@@ -1,4 +1,4 @@
-import { logger } from "./DebugLogger";
+import { logger } from "./utils/DebugLogger";
 import { getNoteDisplay } from "./utils/sequencerUtils";
 
 export class Event {

@@ -37,7 +37,6 @@ const NoteSlot: React.FC<NoteSlotProps> = ({
         top: y,
         width,
         height,
-        opacity: inCurrentWindow ? 1 : 0.8,
       }}
     >
       <span className="text-white text-s font-medium">

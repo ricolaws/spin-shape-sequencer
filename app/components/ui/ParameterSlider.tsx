@@ -61,7 +61,7 @@ const ParameterSlider: React.FC<ParameterSliderProps> = ({
           isNaN(parseFloat(inputValue)) ? param.value : parseFloat(inputValue)
         }
         onChange={handleSliderChange}
-        className="w-full accent-[#0099ff] h-2 rounded-lg appearance-none bg-[#ebebeb]"
+        className="w-full accent-[var(--primary)] h-2 rounded-lg appearance-none bg-[var(--secondary)]"
       />
       <input
         type="number"
@@ -73,7 +73,7 @@ const ParameterSlider: React.FC<ParameterSliderProps> = ({
         step={
           param.steps > 1 ? (param.max - param.min) / (param.steps - 1) : 0.001
         }
-        className="w-16 px-2 py-1 border rounded bg-gray-700 border-gray-600 text-white text-sm"
+        className="w-20 px-2 py-1 border rounded bg-[var(--background)] text-[var(--foreground)] text-sm"
       />
     </div>
   );

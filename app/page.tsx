@@ -29,7 +29,7 @@ export default function Home() {
             onAngleChange={handleAngleChange}
             onNumCornersChange={handleSidesChange}
           />
-          <NoteWindow className="mb-8" />
+          <NoteWindow />
           <Scene sides={sides} angleOfRotation={angleOfRotation} />
         </SequencerProvider>
       </main>

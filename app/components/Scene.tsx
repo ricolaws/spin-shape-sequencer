@@ -26,10 +26,10 @@ const Scene: React.FC<SceneProps> = ({ sides, angleOfRotation }) => {
         <OrbitControls enableZoom={false} />
         <DynamicPolygon
           sides={sides}
-          outerRadius={2.2}
+          outerRadius={2.1}
           innerRadius={1.8}
           height={0.2}
-          color="#dbdbdb"
+          color={colors.polygon}
           transparent={true}
           metalness={1.8}
           roughness={0.5}

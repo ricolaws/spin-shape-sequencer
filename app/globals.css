@@ -4,7 +4,9 @@
 
 :root {
   --background: theme("colors.foreground");
-  --foreground: theme("colors.secondary");
+  --foreground: theme("colors.background");
+  --secondary: theme("colors.secondary");
+  --primary: theme("colors.primary");
 }
 
 @media (prefers-color-scheme: dark) {

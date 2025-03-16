@@ -10,7 +10,7 @@ import React, {
 
 import { MessageEvent, TimeNow } from "@rnbo/js";
 import { Event } from "../components/Event";
-import { logger } from "../components/DebugLogger";
+import { logger } from "../components/utils/DebugLogger";
 
 // Define the trigger listener interface
 interface TriggerListener {
@@ -33,7 +33,7 @@ interface SequencerState {
   noteWindowOffset: number; // Position of the note window (0 to 1)
 }
 
-// LOGGER DEBUG MODE
+// ** ** ** LOGGER DEBUG MODE ** ** **
 logger.setDebugMode(false);
 
 // Create context with updated type definition

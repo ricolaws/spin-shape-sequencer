@@ -6,7 +6,7 @@ interface DynamicPolygonProps {
   outerRadius?: number;
   innerRadius?: number;
   height?: number;
-  color?: string | THREE.Color;
+  color: string | THREE.Color;
   angleOfRotation: number;
   position?: [number, number, number];
   transparent?: boolean;
@@ -19,7 +19,7 @@ const DynamicPolygon: React.FC<DynamicPolygonProps> = ({
   outerRadius = 1,
   innerRadius = 0.8,
   height = 1,
-  color = "#4080bf",
+  color,
   angleOfRotation,
   position = [0, 0, 0],
   transparent = true,
