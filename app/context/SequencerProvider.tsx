@@ -34,7 +34,7 @@ interface SequencerState {
 }
 
 // ** ** ** LOGGER DEBUG MODE ** ** **
-logger.setDebugMode(false);
+logger.setDebugMode(true);
 
 // Create context with updated type definition
 const SequencerContext = createContext<{

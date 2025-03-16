@@ -4,7 +4,9 @@ import { useState } from "react";
 import Scene from "./components/Scene";
 import RNBOShapeSequencer from "./components/audio/RNBOShapeSequencer";
 import { SequencerProvider } from "./context/SequencerProvider";
-import NoteWindow from "./components/ui/NoteWindow";
+// import NoteWindow from "./components/ui/NoteWindow";
+import StepSelector from "./components/ui/StepSelector";
+import { colors } from "./styles/colors";
 
 export default function Home() {
   const [sides, setSides] = useState(5);
@@ -29,7 +31,17 @@ export default function Home() {
             onAngleChange={handleAngleChange}
             onNumCornersChange={handleSidesChange}
           />
-          <NoteWindow />
+          {/* <NoteWindow /> */}
+          <StepSelector
+            height={250}
+            minValue={48} // C3
+            maxValue={72} // C5
+            className="w-full mt-4"
+            activeStepColor={colors.primary}
+            inactiveStepColor="#808080"
+            cellBGColor="#323232"
+            selectorColor={colors.primary}
+          />
           <Scene sides={sides} angleOfRotation={angleOfRotation} />
         </SequencerProvider>
       </main>

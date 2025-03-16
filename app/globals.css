@@ -9,12 +9,12 @@
   --primary: theme("colors.primary");
 }
 
-@media (prefers-color-scheme: dark) {
+/* @media (prefers-color-scheme: dark) {
   :root {
     --background: theme("colors.background");
     --foreground: theme("colors.foreground");
   }
-}
+} */
 
 body {
   color: var(--foreground);
