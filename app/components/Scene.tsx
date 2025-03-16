@@ -17,7 +17,7 @@ interface SceneProps {
 
 const Scene: React.FC<SceneProps> = ({ sides, angleOfRotation }) => {
   return (
-    <div className="w-full h-[600px]">
+    <div className="w-full h-[800px]">
       <Canvas camera={{ position: [0, 0, 5], fov: 60 }}>
         <color attach="background" args={[colors.background]} />
         <Environment preset="night" environmentIntensity={0.8} />
@@ -30,9 +30,9 @@ const Scene: React.FC<SceneProps> = ({ sides, angleOfRotation }) => {
           innerRadius={1.8}
           height={0.2}
           color={colors.polygon}
-          transparent={true}
-          metalness={1.8}
-          roughness={0.5}
+          transparent
+          metalness={2.4}
+          roughness={0.27}
           angleOfRotation={angleOfRotation}
         />
         <SeqRingWrapper radius={2.3} markerSize={0.15} />
