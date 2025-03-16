@@ -8,9 +8,9 @@ import { ThreeEvent } from "@react-three/fiber";
 interface EventMarkerProps {
   event: Event;
   size?: number;
-  activeColor?: string;
-  inactiveColor?: string;
-  triggerColor?: string;
+  activeColor: string;
+  inactiveColor: string;
+  triggerColor: string;
   onEventClick?: (index: number) => void;
   onEventHover?: (index: number, hovered: boolean) => void;
 }
@@ -18,9 +18,9 @@ interface EventMarkerProps {
 const EventMarker: React.FC<EventMarkerProps> = ({
   event,
   size = 0.2,
-  activeColor = "#ffffff",
-  inactiveColor = "#666666",
-  triggerColor = "#ff4500",
+  activeColor,
+  inactiveColor,
+  triggerColor,
   onEventClick,
 }) => {
   const markerRef = useRef<THREE.Mesh>(null);

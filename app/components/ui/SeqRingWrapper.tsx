@@ -10,7 +10,7 @@ interface SeqRingWrapperProps {
 }
 
 const SeqRingWrapper: React.FC<SeqRingWrapperProps> = ({
-  radius = 2.1,
+  radius = 2.3,
   markerSize = 0.15,
 }) => {
   const { state, toggleEvent, registerTriggerListener } = useSequencer();
@@ -73,7 +73,7 @@ const SeqRingWrapper: React.FC<SeqRingWrapperProps> = ({
       radius={radius}
       eventCount={state.numEvents}
       markerSize={markerSize}
-      color={colors.marker.active}
+      ringColor={colors.ring}
       activeColor={colors.marker.active}
       inactiveColor={colors.marker.inactive}
       triggerColor={colors.primary}

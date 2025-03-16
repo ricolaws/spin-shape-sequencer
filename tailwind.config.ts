@@ -5,11 +5,12 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        primary: "#ff4500",
+        primary: "#0036ff",
         secondary: "#282828",
-        background: "#c1c1c1",
+        background: "#282828",
         foreground: "#ebebeb",
-        polygon: "#dbdbdb",
+        polygon: "#4080bf",
+        ring: "#ebebeb",
         marker: {
           active: "#ffffff",
           inactive: "#666666",

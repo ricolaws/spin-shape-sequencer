@@ -1,10 +1,5 @@
-/**
- * NoteSlot component represents a single note in the sequence.
- *
- * It displays the note name and is styled based on whether it's active
- * and whether it's in the current window.
- */
 import React from "react";
+import { getNoteDisplay } from "../utils/sequencerUtils";
 
 interface NoteSlotProps {
   index: number;
@@ -26,35 +21,12 @@ const NoteSlot: React.FC<NoteSlotProps> = ({
   isActive = false,
   inCurrentWindow = false,
 }) => {
-  // Function to convert MIDI note to note name
-  const getNoteDisplay = (pitch: number): string => {
-    if (pitch === 0) return "✖︎";
-
-    const noteNames = [
-      "C",
-      "C♯",
-      "D",
-      "D♯",
-      "E",
-      "F",
-      "F♯",
-      "G",
-      "G♯",
-      "A",
-      "A♯",
-      "B",
-    ];
-    const noteName = noteNames[pitch % 12];
-    const octave = Math.floor(pitch / 12) - 2;
-    return `${noteName}${octave}`;
-  };
-
-  // Determine background color based on state
+  // Determine background color based on state using colors module
   const getBgColor = () => {
-    if (isActive && inCurrentWindow) return "bg-[#ff4500]";
-    if (isActive) return "bg-[#ff4500]";
-    if (inCurrentWindow) return "bg-gray-500";
-    return "bg-[#282828]";
+    if (isActive && inCurrentWindow) return "bg-primary";
+    if (isActive) return "bg-primary";
+    if (inCurrentWindow) return "bg-gray-500"; // Consider adding a specific color for this
+    return "bg-secondary";
   };
 
   return (

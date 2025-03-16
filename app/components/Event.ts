@@ -1,4 +1,5 @@
 import { logger } from "./DebugLogger";
+import { getNoteDisplay } from "./utils/sequencerUtils";
 
 export class Event {
   index: number;
@@ -46,25 +47,7 @@ export class Event {
   }
 
   getNoteDisplay(): string {
-    if (this.noteValue === 0) return "✖︎";
-
-    const noteNames = [
-      "C",
-      "C♯",
-      "D",
-      "D♯",
-      "E",
-      "F",
-      "F♯",
-      "G",
-      "G♯",
-      "A",
-      "A♯",
-      "B",
-    ];
-    const noteName = noteNames[this.noteValue % 12];
-    const octave = Math.floor(this.noteValue / 12) - 2;
-    return `${noteName}${octave}`;
+    return getNoteDisplay(this.noteValue);
   }
 
   setPosition(radius: number, angle: number): void {

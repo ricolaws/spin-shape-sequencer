@@ -16,13 +16,13 @@ interface SeqRingProps {
   radius?: number;
   eventCount?: number;
   lineWidth?: number;
-  color?: string;
+  ringColor: string;
   segments?: number;
   markerSize?: number;
-  activeColor?: string;
-  inactiveColor?: string;
+  activeColor: string;
+  inactiveColor: string;
   hoverColor?: string;
-  triggerColor?: string;
+  triggerColor: string;
   noteValues?: number[];
   initialActiveEvents?: boolean[];
   onEventToggle?: (index: number, active: boolean) => void;
@@ -53,12 +53,12 @@ const SeqRing = forwardRef<RingRef, SeqRingProps>(
       radius = 2,
       eventCount = 8,
       segments = 64,
-      color = "#ffffff",
-      lineWidth = 2,
+      ringColor,
+      lineWidth = 3,
       markerSize = 0.2,
-      activeColor = "#ffffff",
-      inactiveColor = "#666666",
-      triggerColor = "#ffaa00",
+      activeColor,
+      inactiveColor,
+      triggerColor,
       noteValues = [],
       initialActiveEvents = [],
       onEventToggle,
@@ -266,7 +266,7 @@ const SeqRing = forwardRef<RingRef, SeqRingProps>(
           />
           <lineBasicMaterial
             attach="material"
-            color={color}
+            color={ringColor}
             linewidth={lineWidth}
           />
         </line>

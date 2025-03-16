@@ -7,6 +7,7 @@ import {
 import DynamicPolygon from "../components/ui/DynamicPolygon";
 import SeqRingWrapper from "../components/ui/SeqRingWrapper";
 import { Environment, OrbitControls } from "@react-three/drei";
+import { colors } from "../styles/colors";
 
 interface SceneProps {
   sides: number;
@@ -18,7 +19,7 @@ const Scene: React.FC<SceneProps> = ({ sides, angleOfRotation }) => {
   return (
     <div className="w-full h-[600px]">
       <Canvas camera={{ position: [0, 0, 5], fov: 60 }}>
-        <color attach="background" args={["#c1c1c1"]} />
+        <color attach="background" args={[colors.background]} />
         <Environment preset="night" environmentIntensity={0.8} />
         <ambientLight intensity={0.1} />
         <directionalLight position={[3, 13, 2]} intensity={0.8} />
