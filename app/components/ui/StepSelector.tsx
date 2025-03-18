@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useEffect, useRef, useState } from "react";
 import StepCell from "./StepCell";
 import { useSequencer } from "../../context/SequencerProvider";
@@ -7,36 +6,29 @@ import RangeSelector from "./RangeSelector";
 
 interface StepSelectorProps {
   className?: string;
-  height?: number; // Height of the component (default: 200px)
-  minValue?: number; // Minimum pitch value (default: 48 - C3)
-  maxValue?: number; // Maximum pitch value (default: 72 - C5)
-  activeStepColor?: string; // Color for active steps
-  inactiveStepColor?: string; // Color for inactive steps
-  cellBGColor?: string; // Background color of cells
-  selectorColor?: string; // Color of the window border
-}
-
-interface WindowDragState {
-  isDragging: boolean;
-  startX: number;
-  startOffset: number;
+  height?: number;
+  minValue?: number;
+  maxValue?: number;
+  activeStepColor?: string;
+  inactiveStepColor?: string;
+  cellBGColor?: string;
+  selectorColor?: string;
 }
 
 const StepSelector: React.FC<StepSelectorProps> = ({
   className = "",
   height = 200,
-  minValue = 48, // C3
-  maxValue = 72, // C5
-  activeStepColor = "#4080bf", // Blue
-  inactiveStepColor = "#808080", // Gray
-  cellBGColor = "#323232", // Dark gray
-  selectorColor = "#c1c1c1", // Light gray
+  minValue = 48,
+  maxValue = 72,
+  activeStepColor = "#4080bf",
+  inactiveStepColor = "#808080",
+  cellBGColor = "#323232",
+  selectorColor = "#c1c1c1",
 }) => {
-  const { state, setNoteWindowOffset, setNote } = useSequencer();
+  const { state, setNote } = useSequencer();
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0 });
 
-  // Calculate dimensions when component mounts or resizes
   useEffect(() => {
     const updateDimensions = () => {
       if (containerRef.current) {
@@ -50,7 +42,6 @@ const StepSelector: React.FC<StepSelectorProps> = ({
     return () => window.removeEventListener("resize", updateDimensions);
   }, []);
 
-  // Calculate metrics for step cells and window
   const totalSteps = state.events.notes.length;
   const stepWidth = (dimensions.width * 0.75) / totalSteps;
   const spacing = (dimensions.width * 0.25) / (totalSteps + 1);
@@ -133,7 +124,6 @@ const StepSelector: React.FC<StepSelectorProps> = ({
 
             {/* Highlight window for visible steps */}
             <div
-              // onClick={handleContainerClick}
               className="absolute border-4 rounded-sm pointer-events-none"
               style={{
                 left:
