@@ -41,15 +41,15 @@ const StepCell: React.FC<StepCellProps> = ({
   const barHeight = `${valuePercentage}%`;
   const barColor = isActive ? activeStepColor : inactiveStepColor;
   const opacity = inCurrentWindow ? 1 : 0.5;
-  const latestValue = useRef(value); // Track the most recent value
-  const startValue = useRef(value); // Store value at click
-  const startY = useRef(0); // Store Y position at click
-  const isClick = useRef(false); // Track whether it’s a click or a drag
+  const latestValue = useRef(value);
+  const startValue = useRef(value);
+  const startY = useRef(0);
+  const isClick = useRef(false);
 
   const handlePointerDown = (e: React.PointerEvent) => {
     e.preventDefault();
     isDragging.current = true;
-    isClick.current = true; // Assume click initially
+    isClick.current = true;
     startY.current = e.clientY;
     startValue.current = value;
 
@@ -64,7 +64,7 @@ const StepCell: React.FC<StepCellProps> = ({
 
     // If movement exceeds a small threshold, treat as a drag
     if (Math.abs(deltaY) > 3) {
-      isClick.current = false; // This is a drag now!
+      isClick.current = false;
     }
 
     if (!isClick.current && containerRef.current) {
