@@ -13,7 +13,8 @@ import { Event } from "../Event";
 import { logger } from "../utils/DebugLogger";
 
 interface SeqRingProps {
-  radius?: number;
+  radius: number;
+  posZ?: number;
   eventCount?: number;
   lineWidth?: number;
   ringColor: string;
@@ -35,14 +36,16 @@ export interface RingRef {
 // Create and memoize circle geometry outside the component
 const createCircleGeometry = (
   radius: number,
-  segments: number
+  segments: number,
+  posZ: number
 ): THREE.BufferGeometry => {
   const circlePoints = [];
   for (let i = 0; i <= segments; i++) {
     const theta = (i / segments) * Math.PI * 2;
     const x = radius * Math.cos(theta);
     const y = radius * Math.sin(theta);
-    circlePoints.push(new THREE.Vector3(x, y, 0));
+    const z = posZ;
+    circlePoints.push(new THREE.Vector3(x, y, z));
   }
   return new THREE.BufferGeometry().setFromPoints(circlePoints);
 };
@@ -50,7 +53,8 @@ const createCircleGeometry = (
 const SeqRing = forwardRef<RingRef, SeqRingProps>(
   (
     {
-      radius = 2,
+      radius,
+      posZ = 0,
       eventCount = 8,
       segments = 64,
       ringColor,
@@ -80,8 +84,8 @@ const SeqRing = forwardRef<RingRef, SeqRingProps>(
 
     // Memoize circle geometry based only on radius and segments
     const circleGeometry = useMemo(() => {
-      return createCircleGeometry(radius, segments);
-    }, [radius, segments]);
+      return createCircleGeometry(radius, segments, posZ);
+    }, [radius, segments, posZ]);
 
     useEffect(() => {
       geometryRef.current = circleGeometry;
@@ -281,6 +285,7 @@ const SeqRing = forwardRef<RingRef, SeqRingProps>(
             inactiveColor={inactiveColor}
             triggerColor={triggerColor}
             onEventClick={handleEventClick}
+            posZ={posZ}
           />
         ))}
       </group>

@@ -20,29 +20,34 @@ const Scene: React.FC<SceneProps> = ({ sides, angleOfRotation }) => {
     <div className="w-full h-[800px]">
       <Canvas camera={{ position: [0, 0, 5], fov: 60 }}>
         <color attach="background" args={[colors.background]} />
-        <Environment preset="night" environmentIntensity={0.8} />
-        <ambientLight intensity={0.1} />
-        <directionalLight position={[3, 13, 2]} intensity={0.8} />
+        <Environment preset="sunset" environmentIntensity={0.5} />
+        <ambientLight intensity={0.2} />
+        <directionalLight position={[-2, 8, 4]} intensity={0.3} />
         <OrbitControls enableZoom={false} />
         <DynamicPolygon
           sides={sides}
-          outerRadius={2.1}
-          innerRadius={1.8}
-          height={0.2}
+          outerRadius={2.4}
+          innerRadius={2.1}
           color={colors.polygon}
-          transparent
-          metalness={2.4}
-          roughness={0.27}
           angleOfRotation={angleOfRotation}
         />
-        <SeqRingWrapper radius={2.3} markerSize={0.15} />
+        <SeqRingWrapper radius={2.55} markerSize={0.15} posZ={0} />
+        <DynamicPolygon
+          sides={5}
+          outerRadius={1.6}
+          innerRadius={1.3}
+          position={[0, 0, 0.6]}
+          color={colors.polygon}
+          angleOfRotation={angleOfRotation}
+        />
+        <SeqRingWrapper radius={1.75} markerSize={0.15} posZ={0.6} />
         <EffectComposer>
           <Bloom
             intensity={0.12}
             luminanceThreshold={0.8}
             luminanceSmoothing={0.8}
           />
-          <ChromaticAberration opacity={2} />
+          {/* <ChromaticAberration opacity={2} /> */}
         </EffectComposer>
       </Canvas>
     </div>

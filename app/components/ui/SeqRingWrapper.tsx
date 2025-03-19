@@ -7,11 +7,13 @@ import { colors } from "../../../app/styles/colors";
 interface SeqRingWrapperProps {
   radius?: number;
   markerSize?: number;
+  posZ?: number;
 }
 
 const SeqRingWrapper: React.FC<SeqRingWrapperProps> = ({
   radius = 2.3,
   markerSize = 0.15,
+  posZ = 0,
 }) => {
   const { state, toggleEvent, registerTriggerListener } = useSequencer();
   const ringRef = useRef<RingRef>(null);
@@ -71,6 +73,7 @@ const SeqRingWrapper: React.FC<SeqRingWrapperProps> = ({
     <SeqRing
       ref={ringRef}
       radius={radius}
+      posZ={posZ}
       eventCount={state.numEvents}
       markerSize={markerSize}
       ringColor={colors.ring}

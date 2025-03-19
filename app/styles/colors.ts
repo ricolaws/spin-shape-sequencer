@@ -1,10 +1,10 @@
 // ** also update in tailwind.config.ts :( **
 export const colors = {
   primary: "#0036ff",
-  secondary: "#cdcdcd",
-  background: "#282828",
-  foreground: "#ebe8e8",
-  polygon: "#ebddde",
+  secondary: "#06D6A0",
+  background: "#343434",
+  foreground: "#FFFCF9",
+  polygon: "#98958D",
   ring: "#ebebeb",
   marker: {
     active: "#ffffff",

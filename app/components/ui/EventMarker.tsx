@@ -13,6 +13,7 @@ interface EventMarkerProps {
   triggerColor: string;
   onEventClick?: (index: number) => void;
   onEventHover?: (index: number, hovered: boolean) => void;
+  posZ?: number;
 }
 
 const EventMarker: React.FC<EventMarkerProps> = ({
@@ -22,6 +23,7 @@ const EventMarker: React.FC<EventMarkerProps> = ({
   inactiveColor,
   triggerColor,
   onEventClick,
+  posZ = 0,
 }) => {
   const markerRef = useRef<THREE.Mesh>(null);
   const triggerRef = useRef<THREE.Mesh>(null);
@@ -75,7 +77,7 @@ const EventMarker: React.FC<EventMarkerProps> = ({
   }, [event.active]);
 
   return (
-    <group position={event.position}>
+    <group position={[event.position[0], event.position[1], posZ]}>
       {/* Trigger effect circle */}
       {event.triggered && (
         <mesh ref={triggerRef} position={[0, 0, -0.01]}>

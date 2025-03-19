@@ -18,13 +18,13 @@ const DynamicPolygon: React.FC<DynamicPolygonProps> = ({
   sides,
   outerRadius = 1,
   innerRadius = 0.8,
-  height = 1,
+  height = 0.2,
   color,
   angleOfRotation,
   position = [0, 0, 0],
   transparent = true,
-  metalness = 0.3,
-  roughness = 0.3,
+  metalness = 1.4,
+  roughness = 0.37,
 }) => {
   const validSides = Math.max(3, Math.min(8, Math.round(sides)));
   const groupRef = useRef<THREE.Group>(null);

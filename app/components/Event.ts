@@ -53,6 +53,7 @@ export class Event {
   setPosition(radius: number, angle: number): void {
     const x = radius * Math.cos(angle);
     const y = radius * Math.sin(angle);
-    this.position = [x, y, 0];
+    const z = this.position[2];
+    this.position = [x, y, z];
   }
 }
