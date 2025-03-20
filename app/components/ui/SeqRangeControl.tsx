@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useSequencer } from "../../context/SequencerProvider";
 
-interface RangeSelectorProps {
-  target: "A" | "B"; // Which polygon this selector is for
+interface SeqRangeControlProps {
+  target: "A" | "B";
   className?: string;
   minPossibleValue?: number;
   maxPossibleValue?: number;
@@ -13,7 +13,7 @@ interface RangeSelectorProps {
   height?: number;
 }
 
-const RangeSelector: React.FC<RangeSelectorProps> = ({
+const SeqRangeControl: React.FC<SeqRangeControlProps> = ({
   target,
   className = "",
   minPossibleValue = 0,
@@ -291,8 +291,8 @@ const RangeSelector: React.FC<RangeSelectorProps> = ({
               height: "12px",
               transform: "translateY(-50%)",
               backgroundColor: rangeColor,
-              opacity: 0.8,
-              zIndex: dragType === "range" ? 2 : 1,
+              opacity: dragType === "range" ? 1 : 0.8,
+              zIndex: dragType === "range" ? 3 : 1,
             }}
             onPointerDown={(e) => handlePointerDown(e, "range")}
           />
@@ -309,7 +309,7 @@ const RangeSelector: React.FC<RangeSelectorProps> = ({
               backgroundColor: handleColor,
               border: "2px solid white",
               boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
-              zIndex: dragType === "min" ? 3 : 2,
+              zIndex: 2,
             }}
             onPointerDown={(e) => handlePointerDown(e, "min")}
           />
@@ -326,7 +326,7 @@ const RangeSelector: React.FC<RangeSelectorProps> = ({
               backgroundColor: handleColor,
               border: "2px solid white",
               boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
-              zIndex: dragType === "max" ? 3 : 2,
+              zIndex: 2,
             }}
             onPointerDown={(e) => handlePointerDown(e, "max")}
           />
@@ -336,4 +336,4 @@ const RangeSelector: React.FC<RangeSelectorProps> = ({
   );
 };
 
-export default RangeSelector;
+export default SeqRangeControl;

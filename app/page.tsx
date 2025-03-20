@@ -4,6 +4,7 @@ import { useState } from "react";
 import Scene from "./components/Scene";
 import RNBOShapeSequencer from "./components/audio/RNBOShapeSequencer";
 import { SequencerProvider } from "./context/SequencerProvider";
+import SeqEditor from "./components/ui/SeqEditor";
 
 export default function Home() {
   const [sidesA, setSidesA] = useState(5);
@@ -36,6 +37,10 @@ export default function Home() {
             onNumCorners_AChange={handleSidesAChange}
             onNumCorners_BChange={handleSidesBChange}
           />
+
+          <div className="w-full">
+            <SeqEditor height={180} />
+          </div>
           <Scene
             sidesA={sidesA}
             sidesB={sidesB}

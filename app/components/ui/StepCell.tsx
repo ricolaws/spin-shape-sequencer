@@ -123,7 +123,7 @@ const StepCell: React.FC<StepCellProps> = ({
       className="absolute flex flex-col justify-end"
       style={{
         left: x,
-        bottom: 0,
+        bottom: 4,
         width,
         height,
         backgroundColor: cellBGColor,

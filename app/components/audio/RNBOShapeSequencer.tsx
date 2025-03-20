@@ -16,9 +16,7 @@ interface Props {
 // Define the list of parameters to display and their order
 const DISPLAY_PARAMETERS = [
   "speed",
-  "numEvents_A",
   "numCorners_A",
-  "numEvents_B",
   "numCorners_B",
   "noteLength",
   "Release",
