@@ -12,9 +12,10 @@ import { MessageEvent, TimeNow } from "@rnbo/js";
 import { Event } from "../components/Event";
 import { logger } from "../components/utils/DebugLogger";
 
-// Define the trigger listener interface
+// Define the trigger listener interface with target to specify polygon A or B
 interface TriggerListener {
   onTrigger: (index: number) => void;
+  target: "A" | "B"; // Which polygon this listener is for
 }
 
 // Define types for our sequencer state
@@ -29,8 +30,17 @@ interface SequencerState {
     active: boolean[];
   };
   visualEvents: Event[]; // Array of Event objects for visual representation
-  numEvents: number; // Number of events to display
-  noteWindowOffset: number; // Position of the note window (0 to 1)
+
+  // Separate properties for A and B polygons
+  numEvents: {
+    A: number;
+    B: number;
+  };
+
+  noteWindowOffset: {
+    A: number;
+    B: number;
+  };
 }
 
 // ** ** ** LOGGER DEBUG MODE ** ** **
@@ -39,13 +49,13 @@ logger.setDebugMode(false);
 // Create context with updated type definition
 const SequencerContext = createContext<{
   state: SequencerState;
-  toggleEvent: (index: number, newActiveState?: boolean) => void; // Added newActiveState parameter
+  toggleEvent: (index: number, newActiveState?: boolean) => void;
   setNote: (index: number, note: NoteData) => void;
   setRnboDevice: React.Dispatch<any>;
-  triggerEvent: (index: number) => void;
+  triggerEvent: (index: number, target: "A" | "B") => void;
   registerTriggerListener: (listener: TriggerListener) => () => void;
-  setNumEvents: (num: number) => void;
-  setNoteWindowOffset: (offset: number) => void;
+  setNumEvents: (num: number, target: "A" | "B") => void;
+  setNoteWindowOffset: (offset: number, target: "A" | "B") => void;
 }>(null!);
 
 // Hook for using the sequencer context
@@ -113,8 +123,15 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
         active: initialActive,
       },
       visualEvents: visualEvents,
-      numEvents: initialNotes.length, // Default to showing all events
-      noteWindowOffset: 0, // Start at the beginning (0%)
+      // Initialize separate values for A and B
+      numEvents: {
+        A: 8, // Default to 8 events for A
+        B: 5, // Default to 5 events for B
+      },
+      noteWindowOffset: {
+        A: 0, // Start at the beginning (0%) for A
+        B: 0, // Start at the beginning (0%) for B
+      },
     };
   });
 
@@ -178,28 +195,48 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     });
 
-    // Send the current start_index
-    const maxOffset = state.events.notes.length - state.numEvents;
-    const startIndex = Math.round(state.noteWindowOffset * maxOffset);
-
-    const startIndexEvent = new MessageEvent(TimeNow, "start_index", [
-      startIndex,
+    // Send the current start_index for both A and B
+    // For A
+    const maxOffsetA = state.events.notes.length - state.numEvents.A;
+    const startIndexA = Math.round(state.noteWindowOffset.A * maxOffsetA);
+    const startIndexEventA = new MessageEvent(TimeNow, "start_index_A", [
+      startIndexA,
     ]);
+
     try {
-      device.scheduleEvent(startIndexEvent);
-      logger.log(`Sent start_index: ${startIndex} to RNBO device`);
+      device.scheduleEvent(startIndexEventA);
+      logger.log(`Sent start_index_A: ${startIndexA} to RNBO device`);
     } catch (error) {
-      logger.error(`Error sending start_index to RNBO device:`, error);
+      logger.error(`Error sending start_index_A to RNBO device:`, error);
+    }
+
+    // For B
+    const maxOffsetB = state.events.notes.length - state.numEvents.B;
+    const startIndexB = Math.round(state.noteWindowOffset.B * maxOffsetB);
+    const startIndexEventB = new MessageEvent(TimeNow, "start_index_B", [
+      startIndexB,
+    ]);
+
+    try {
+      device.scheduleEvent(startIndexEventB);
+      logger.log(`Sent start_index_B: ${startIndexB} to RNBO device`);
+    } catch (error) {
+      logger.error(`Error sending start_index_B to RNBO device:`, error);
     }
   };
 
-  // Calculate the current window start index
-  const getWindowStartIndex = useCallback(() => {
-    const maxOffset = state.events.notes.length - state.numEvents;
-    return Math.round(state.noteWindowOffset * maxOffset);
-  }, [state.events.notes.length, state.numEvents, state.noteWindowOffset]);
+  // Calculate the current window start index for each target
+  const getWindowStartIndex = useCallback(
+    (target: "A" | "B") => {
+      const numEvents = state.numEvents[target];
+      const offset = state.noteWindowOffset[target];
+      const maxOffset = state.events.notes.length - numEvents;
+      return Math.round(offset * maxOffset);
+    },
+    [state.events.notes.length, state.numEvents, state.noteWindowOffset]
+  );
 
-  // Register a trigger listener (using useCallback to maintain stability)
+  // Register a trigger listener with target
   const registerTriggerListener = useCallback((listener: TriggerListener) => {
     triggerListenersRef.current.push(listener);
 
@@ -211,7 +248,7 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, []);
 
-  // MODIFIED: Toggle event active state with option to set specific state
+  // Toggle event active state with option to set specific state
   const toggleEvent = useCallback(
     (index: number, newActiveState?: boolean) => {
       if (index < 0 || index >= state.events.active.length) return;
@@ -255,29 +292,48 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
 
         // Send update to RNBO - but only if we have a device
         if (rnboDeviceRef.current) {
-          const startIndex = getWindowStartIndex();
+          // For both A and B, we need to check if the index is in the current window
+          // and update accordingly
 
-          // Calculate the RNBO index based on the window position
-          // Only send the update if the toggled event is in the current window
-          if (index >= startIndex && index < startIndex + prev.numEvents) {
-            const relativeIndex = index - startIndex;
-
-            const event = new MessageEvent(TimeNow, "update_active", [
-              relativeIndex, // RNBO expects relative indices within the window
+          // Check for A
+          const startIndexA = getWindowStartIndex("A");
+          if (index >= startIndexA && index < startIndexA + prev.numEvents.A) {
+            const relativeIndexA = index - startIndexA;
+            const eventA = new MessageEvent(TimeNow, "update_active", [
+              relativeIndexA, // RNBO expects relative indices within the window
               isActive ? 1 : 0,
             ]);
-
-            rnboDeviceRef.current.scheduleEvent(event);
-
+            rnboDeviceRef.current.scheduleEvent(eventA);
             logger.log(
-              `Sent update_active: [${relativeIndex}, ${
+              `Sent update_active for A: [${relativeIndexA}, ${
                 isActive ? 1 : 0
               }] to RNBO (from absolute index ${index})`
             );
-          } else {
-            // Event is outside current window - update the full sequence in RNBO
+          }
+
+          // Check for B
+          const startIndexB = getWindowStartIndex("B");
+          if (index >= startIndexB && index < startIndexB + prev.numEvents.B) {
+            const relativeIndexB = index - startIndexB;
+            const eventB = new MessageEvent(TimeNow, "update_active", [
+              relativeIndexB, // RNBO expects relative indices within the window
+              isActive ? 1 : 0,
+            ]);
+            rnboDeviceRef.current.scheduleEvent(eventB);
             logger.log(
-              `Event ${index} updated but is outside current window, not sending to RNBO`
+              `Sent update_active for B: [${relativeIndexB}, ${
+                isActive ? 1 : 0
+              }] to RNBO (from absolute index ${index})`
+            );
+          }
+
+          // If the index is outside both windows, just log it
+          if (
+            (index < startIndexA || index >= startIndexA + prev.numEvents.A) &&
+            (index < startIndexB || index >= startIndexB + prev.numEvents.B)
+          ) {
+            logger.log(
+              `Event ${index} updated but is outside both current windows, not sending to RNBO`
             );
           }
         }
@@ -328,9 +384,9 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
     [state.events.notes.length]
   );
 
-  // Trigger visual event and notify listeners
+  // Trigger visual event and notify listeners - now with target
   const triggerEvent = useCallback(
-    (index: number) => {
+    (index: number, target: "A" | "B") => {
       // The index from RNBO is now an absolute index in the sequence
       // We just need to make sure it's in range for the visual events
       if (index < 0 || index >= state.visualEvents.length) {
@@ -343,7 +399,7 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       logger.log(
-        `SequencerProvider: Triggering event ${index}, active: ${state.events.active[index]}`
+        `SequencerProvider: Triggering event ${index} for ${target}, active: ${state.events.active[index]}`
       );
 
       // Only update if the event is active
@@ -364,31 +420,34 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
           });
 
           logger.log(
-            `SequencerProvider: Event ${index} triggered successfully`
+            `SequencerProvider: Event ${index} triggered successfully for ${target}`
           );
         }
       }
 
       // For the ring visualization, we need to convert the absolute index
-      // to a relative index within the current window
-      const startIndex = getWindowStartIndex();
+      // to a relative index within the current window for the specific target
+      const startIndex = getWindowStartIndex(target);
+      const numEvents = state.numEvents[target];
 
       // Only trigger ring visualization if the event is in the current window
-      if (index >= startIndex && index < startIndex + state.numEvents) {
+      if (index >= startIndex && index < startIndex + numEvents) {
         const relativeIndex = index - startIndex;
 
         logger.log(
-          `SequencerProvider: Notifying listeners of trigger at relative index ${relativeIndex}`
+          `SequencerProvider: Notifying listeners of trigger at relative index ${relativeIndex} for ${target}`
         );
 
-        // Notify all registered listeners with the relative index
-        triggerListenersRef.current.forEach((listener) => {
-          try {
-            listener.onTrigger(relativeIndex);
-          } catch (err) {
-            logger.error("Error in trigger listener:", err);
-          }
-        });
+        // Notify only listeners for this target with the relative index
+        triggerListenersRef.current
+          .filter((listener) => listener.target === target)
+          .forEach((listener) => {
+            try {
+              listener.onTrigger(relativeIndex);
+            } catch (err) {
+              logger.error(`Error in trigger listener for ${target}:`, err);
+            }
+          });
       }
     },
     [
@@ -399,50 +458,63 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
     ]
   );
 
-  // Set the number of events to display
+  // Set the number of events to display for target A or B
   const setNumEvents = useCallback(
-    (num: number) => {
+    (num: number, target: "A" | "B") => {
       const validNum = Math.max(
         1,
         Math.min(state.events.notes.length, Math.round(num))
       );
-      logger.log(`Setting numEvents to ${validNum}`);
+      logger.log(`Setting numEvents for ${target} to ${validNum}`);
 
       setState((prev) => ({
         ...prev,
-        numEvents: validNum,
+        numEvents: {
+          ...prev.numEvents,
+          [target]: validNum,
+        },
       }));
     },
     [state.events.notes.length]
   );
 
-  // Set the position of the note window
+  // Set the position of the note window for target A or B
   const setNoteWindowOffset = useCallback(
-    (offset: number) => {
+    (offset: number, target: "A" | "B") => {
       const validOffset = Math.max(0, Math.min(1, offset));
-      logger.log(`Setting noteWindowOffset to ${validOffset}`);
+      logger.log(`Setting noteWindowOffset for ${target} to ${validOffset}`);
 
       // Calculate the starting index based on the offset
-      const maxOffset = state.events.notes.length - state.numEvents;
+      const maxOffset = state.events.notes.length - state.numEvents[target];
       const startIndex = Math.round(validOffset * maxOffset);
 
-      logger.log(`Window now starts at index ${startIndex}`);
+      logger.log(`Window for ${target} now starts at index ${startIndex}`);
 
       setState((prev) => ({
         ...prev,
-        noteWindowOffset: validOffset,
+        noteWindowOffset: {
+          ...prev.noteWindowOffset,
+          [target]: validOffset,
+        },
       }));
 
       // Send start_index message to RNBO device
       if (rnboDeviceRef.current) {
         // Create a message event with the starting index
-        const event = new MessageEvent(TimeNow, "start_index", [startIndex]);
+        const event = new MessageEvent(TimeNow, `start_index_${target}`, [
+          startIndex,
+        ]);
 
         try {
           rnboDeviceRef.current.scheduleEvent(event);
-          logger.log(`Sent start_index: ${startIndex} to RNBO device`);
+          logger.log(
+            `Sent start_index_${target}: ${startIndex} to RNBO device`
+          );
         } catch (error) {
-          logger.error(`Error sending start_index to RNBO device:`, error);
+          logger.error(
+            `Error sending start_index_${target} to RNBO device:`,
+            error
+          );
         }
       }
     },

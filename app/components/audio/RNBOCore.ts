@@ -60,7 +60,7 @@ export async function getOrCreateDevice(
       }
 
       onStatusChange("Loading RNBO patcher...");
-      const response = await fetch("/spinShapeSeq.export.json");
+      const response = await fetch("/spinShapeSeq2.export.json");
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

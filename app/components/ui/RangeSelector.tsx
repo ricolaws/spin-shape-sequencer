@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useSequencer } from "../../context/SequencerProvider";
 
 interface RangeSelectorProps {
+  target: "A" | "B"; // Which polygon this selector is for
   className?: string;
   minPossibleValue?: number;
   maxPossibleValue?: number;
@@ -13,6 +14,7 @@ interface RangeSelectorProps {
 }
 
 const RangeSelector: React.FC<RangeSelectorProps> = ({
+  target,
   className = "",
   minPossibleValue = 0,
   maxPossibleValue = 16,
@@ -36,11 +38,11 @@ const RangeSelector: React.FC<RangeSelectorProps> = ({
     startMaxValue: 0,
   });
 
-  // Calculate local min and max from the sequencer state
+  // Calculate local min and max from the sequencer state for this target
   const totalSteps = state.events.notes.length;
-  const maxOffset = totalSteps - state.numEvents;
-  const startIndex = Math.round(state.noteWindowOffset * maxOffset);
-  const endIndex = startIndex + state.numEvents - 1;
+  const maxOffset = totalSteps - state.numEvents[target];
+  const startIndex = Math.round(state.noteWindowOffset[target] * maxOffset);
+  const endIndex = startIndex + state.numEvents[target] - 1;
 
   // Local state for min and max values
   const [minValue, setMinValue] = useState(startIndex);
@@ -95,13 +97,15 @@ const RangeSelector: React.FC<RangeSelectorProps> = ({
   useEffect(() => {
     if (dragType === null) {
       // Only update when not dragging to prevent jumps
-      const newStartIndex = Math.round(state.noteWindowOffset * maxOffset);
-      const newEndIndex = newStartIndex + state.numEvents - 1;
+      const newStartIndex = Math.round(
+        state.noteWindowOffset[target] * maxOffset
+      );
+      const newEndIndex = newStartIndex + state.numEvents[target] - 1;
 
       setMinValue(newStartIndex);
       setMaxValue(newEndIndex);
     }
-  }, [state.noteWindowOffset, state.numEvents, maxOffset, dragType]);
+  }, [state.noteWindowOffset, state.numEvents, maxOffset, dragType, target]);
 
   // Calculate pixel positions for handles to align with StepCells
   const getPositionFromValue = (value: number): number => {
@@ -235,12 +239,13 @@ const RangeSelector: React.FC<RangeSelectorProps> = ({
       minValue,
       maxValue,
       rangeValue: rangeSize,
+      target,
     });
 
     // Apply state changes - check that range meets minimum size
     if (rangeSize >= minRangeSize) {
-      setNumEvents(rangeSize);
-      setNoteWindowOffset(newOffset);
+      setNumEvents(rangeSize, target);
+      setNoteWindowOffset(newOffset, target);
     }
 
     // Reset drag state

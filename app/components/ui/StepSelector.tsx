@@ -5,6 +5,7 @@ import { logger } from "../utils/DebugLogger";
 import RangeSelector from "./RangeSelector";
 
 interface StepSelectorProps {
+  target: "A" | "B"; // Which polygon this selector is for
   className?: string;
   height?: number;
   minValue?: number;
@@ -16,6 +17,7 @@ interface StepSelectorProps {
 }
 
 const StepSelector: React.FC<StepSelectorProps> = ({
+  target,
   className = "",
   height = 200,
   minValue = 48,
@@ -46,15 +48,15 @@ const StepSelector: React.FC<StepSelectorProps> = ({
   const stepWidth = (dimensions.width * 0.75) / totalSteps;
   const spacing = (dimensions.width * 0.25) / (totalSteps + 1);
 
-  // Calculate the starting index based on the window offset
-  const maxOffset = totalSteps - state.numEvents;
-  const startIndex = Math.round(state.noteWindowOffset * maxOffset);
+  // Calculate the starting index based on the window offset for this target
+  const maxOffset = totalSteps - state.numEvents[target];
+  const startIndex = Math.round(state.noteWindowOffset[target] * maxOffset);
 
   // Function to calculate window highlight width
   const calculateHighlightWidth = () => {
     return (
-      state.numEvents * stepWidth +
-      (state.numEvents - 1) * spacing +
+      state.numEvents[target] * stepWidth +
+      (state.numEvents[target] - 1) * spacing +
       spacing +
       2
     );
@@ -63,6 +65,7 @@ const StepSelector: React.FC<StepSelectorProps> = ({
   return (
     <div className="w-full mb-4">
       <RangeSelector
+        target={target}
         minPossibleValue={0}
         maxPossibleValue={totalSteps - 1}
         minRangeSize={3}
@@ -83,9 +86,10 @@ const StepSelector: React.FC<StepSelectorProps> = ({
             {/* Step cells */}
             <div className="absolute inset-0">
               {state.events.notes.map((note, index) => {
-                // Calculate if this step is in the current window
+                // Calculate if this step is in the current window for this target
                 const inCurrentWindow =
-                  index >= startIndex && index < startIndex + state.numEvents;
+                  index >= startIndex &&
+                  index < startIndex + state.numEvents[target];
 
                 // Handler for pitch value changes - simplified
                 const handlePitchChange = (index: number, newPitch: number) => {
@@ -129,7 +133,9 @@ const StepSelector: React.FC<StepSelectorProps> = ({
                 left:
                   spacing -
                   spacing / 2 +
-                  state.noteWindowOffset * maxOffset * (stepWidth + spacing),
+                  state.noteWindowOffset[target] *
+                    maxOffset *
+                    (stepWidth + spacing),
                 top: 0,
                 width: calculateHighlightWidth(),
                 height: height,

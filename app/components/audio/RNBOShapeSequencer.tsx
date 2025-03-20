@@ -9,14 +9,17 @@ import { logger } from "../utils/DebugLogger";
 
 interface Props {
   onAngleChange?: (angle: number) => void;
-  onNumCornersChange?: (numCorners: number) => void;
+  onNumCorners_AChange?: (numCorners: number) => void;
+  onNumCorners_BChange?: (numCorners: number) => void;
 }
 
 // Define the list of parameters to display and their order
 const DISPLAY_PARAMETERS = [
   "speed",
-  "numEvents",
-  "numCorners",
+  "numEvents_A",
+  "numCorners_A",
+  "numEvents_B",
+  "numCorners_B",
   "noteLength",
   "Release",
   "partials",
@@ -26,7 +29,11 @@ const DISPLAY_PARAMETERS = [
 // Define which parameters should use float values (all others use integers)
 const FLOAT_PARAMETERS = ["speed", "balance"];
 
-const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
+const RNBOShapeSequencer = ({
+  onAngleChange,
+  onNumCorners_AChange,
+  onNumCorners_BChange,
+}: Props) => {
   const {
     state,
     setRnboDevice,
@@ -39,7 +46,10 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
   const messageSubscriptionRef = useRef<{ unsubscribe: () => void } | null>(
     null
   );
-  const numEventsInitializedRef = useRef(false);
+  const numEventsInitializedRef = useRef({
+    A: false,
+    B: false,
+  });
 
   // Store function references to prevent effect reruns
   const setRnboDeviceRef = useRef(setRnboDevice);
@@ -47,19 +57,22 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
   const setNumEventsRef = useRef(setNumEvents);
   const setNoteWindowOffsetRef = useRef(setNoteWindowOffset);
   const onAngleChangeRef = useRef(onAngleChange);
-  const onNumCornersChangeRef = useRef(onNumCornersChange);
+  const onNumCorners_AChangeRef = useRef(onNumCorners_AChange);
+  const onNumCorners_BChangeRef = useRef(onNumCorners_BChange);
 
   // Update refs when props change (without triggering effect reruns)
   useEffect(() => {
     onAngleChangeRef.current = onAngleChange;
-    onNumCornersChangeRef.current = onNumCornersChange;
+    onNumCorners_AChangeRef.current = onNumCorners_AChange;
+    onNumCorners_BChangeRef.current = onNumCorners_BChange;
     setRnboDeviceRef.current = setRnboDevice;
     triggerEventRef.current = triggerEvent;
     setNumEventsRef.current = setNumEvents;
     setNoteWindowOffsetRef.current = setNoteWindowOffset;
   }, [
     onAngleChange,
-    onNumCornersChange,
+    onNumCorners_AChange,
+    onNumCorners_BChange,
     setRnboDevice,
     triggerEvent,
     setNumEvents,
@@ -80,30 +93,62 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
           setRnboDeviceRef.current(device);
         }
 
-        // Initialize numCorners value
-        if (onNumCornersChangeRef.current) {
-          const numCornersParam = device.parameters.find(
-            (p) => p.name === "numCorners"
+        // Initialize numCorners_A value
+        if (onNumCorners_AChangeRef.current) {
+          const numCorners_AParam = device.parameters.find(
+            (p) => p.name === "numCorners_A"
           );
-          if (numCornersParam) {
-            onNumCornersChangeRef.current(Math.round(numCornersParam.value));
+          if (numCorners_AParam) {
+            onNumCorners_AChangeRef.current(
+              Math.round(numCorners_AParam.value)
+            );
           }
         }
 
-        // Initialize numEvents from RNBO device if it exists AND we haven't done it yet
-        if (!numEventsInitializedRef.current) {
-          const numEventsParam = device.parameters.find(
-            (p) => p.name === "numEvents"
+        // Initialize numCorners_B value
+        if (onNumCorners_BChangeRef.current) {
+          const numCorners_BParam = device.parameters.find(
+            (p) => p.name === "numCorners_B"
           );
-          if (numEventsParam && typeof setNumEventsRef.current === "function") {
-            setNumEventsRef.current(Math.round(numEventsParam.value));
-            numEventsInitializedRef.current = true; // Mark as initialized
+          if (numCorners_BParam) {
+            onNumCorners_BChangeRef.current(
+              Math.round(numCorners_BParam.value)
+            );
           }
         }
 
-        // Send initial start_index of 0
+        // Initialize numEvents_A from RNBO device if it exists AND we haven't done it yet
+        if (!numEventsInitializedRef.current.A) {
+          const numEvents_AParam = device.parameters.find(
+            (p) => p.name === "numEvents_A"
+          );
+          if (
+            numEvents_AParam &&
+            typeof setNumEventsRef.current === "function"
+          ) {
+            setNumEventsRef.current(Math.round(numEvents_AParam.value), "A");
+            numEventsInitializedRef.current.A = true; // Mark as initialized
+          }
+        }
+
+        // Initialize numEvents_B from RNBO device if it exists AND we haven't done it yet
+        if (!numEventsInitializedRef.current.B) {
+          const numEvents_BParam = device.parameters.find(
+            (p) => p.name === "numEvents_B"
+          );
+          if (
+            numEvents_BParam &&
+            typeof setNumEventsRef.current === "function"
+          ) {
+            setNumEventsRef.current(Math.round(numEvents_BParam.value), "B");
+            numEventsInitializedRef.current.B = true; // Mark as initialized
+          }
+        }
+
+        // Send initial start_index of 0 for both A and B
         if (typeof setNoteWindowOffsetRef.current === "function") {
-          setNoteWindowOffsetRef.current(0);
+          setNoteWindowOffsetRef.current(0, "A");
+          setNoteWindowOffsetRef.current(0, "B");
         }
 
         // Filter parameters to only include those in DISPLAY_PARAMETERS list
@@ -131,13 +176,19 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
           // Handle angle messages
           if (ev.tag === "angle") {
             if (onAngleChangeRef.current) onAngleChangeRef.current(ev.payload);
-          } else if (ev.tag === "trigger") {
-            // The eventIndex is already adjusted by the RNBO device to account for the start_index
+          } else if (ev.tag === "trigger_A") {
             const eventIndex = ev.payload;
 
-            // Trigger the event through the context
+            // Trigger the event through the context for polygon A
             if (typeof triggerEventRef.current === "function") {
-              triggerEventRef.current(eventIndex);
+              triggerEventRef.current(eventIndex, "A");
+            }
+          } else if (ev.tag === "trigger_B") {
+            const eventIndex = ev.payload;
+
+            // Trigger the event through the context for polygon B
+            if (typeof triggerEventRef.current === "function") {
+              triggerEventRef.current(eventIndex, "B");
             }
           }
         });
@@ -176,28 +227,43 @@ const RNBOShapeSequencer = ({ onAngleChange, onNumCornersChange }: Props) => {
         param.value = value;
 
         // Special handling for specific parameters
-        if (param.name === "numCorners" && onNumCornersChangeRef.current) {
-          onNumCornersChangeRef.current(Math.round(value));
+        if (param.name === "numCorners_A" && onNumCorners_AChangeRef.current) {
+          onNumCorners_AChangeRef.current(Math.round(value));
         }
 
-        // Handle numEvents parameter
+        if (param.name === "numCorners_B" && onNumCorners_BChangeRef.current) {
+          onNumCorners_BChangeRef.current(Math.round(value));
+        }
+
+        // Handle numEvents_A parameter
         if (
-          param.name === "numEvents" &&
+          param.name === "numEvents_A" &&
           typeof setNumEventsRef.current === "function"
         ) {
           // We don't need to sync to RNBO since the slider already did that
-          setNumEventsRef.current(Math.round(value));
+          setNumEventsRef.current(Math.round(value), "A");
 
           // When numEvents changes, we need to ensure the window offset is still valid
           // If the window offset would cause events to go out of bounds, adjust it
-          const device = await getOrCreateDevice(setDeviceStatus);
-          if (device && typeof setNoteWindowOffsetRef.current === "function") {
-            const maxOffset =
-              device.parameters.find((p) => p.name === "numEvents")?.value || 0;
-            if (maxOffset > 0) {
-              // Check and possibly adjust the window offset
-              setNoteWindowOffsetRef.current(state.noteWindowOffset);
-            }
+          if (typeof setNoteWindowOffsetRef.current === "function") {
+            // Check and possibly adjust the window offset for A
+            setNoteWindowOffsetRef.current(state.noteWindowOffset.A, "A");
+          }
+        }
+
+        // Handle numEvents_B parameter
+        if (
+          param.name === "numEvents_B" &&
+          typeof setNumEventsRef.current === "function"
+        ) {
+          // We don't need to sync to RNBO since the slider already did that
+          setNumEventsRef.current(Math.round(value), "B");
+
+          // When numEvents changes, we need to ensure the window offset is still valid
+          // If the window offset would cause events to go out of bounds, adjust it
+          if (typeof setNoteWindowOffsetRef.current === "function") {
+            // Check and possibly adjust the window offset for B
+            setNoteWindowOffsetRef.current(state.noteWindowOffset.B, "B");
           }
         }
       }
