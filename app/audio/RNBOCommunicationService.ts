@@ -152,4 +152,4 @@ export class RNBOCommunicationService {
   }
 }
 
-export const rnboCommunication = new RNBOCommunicationService();
+export const RNBOCommunication = new RNBOCommunicationService();

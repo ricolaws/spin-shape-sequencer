@@ -8,39 +8,20 @@ import React, {
   useMemo,
 } from "react";
 
-import { MessageEvent, TimeNow } from "@rnbo/js";
+import { TimeNow, MessageEvent } from "@rnbo/js";
 import { Event } from "../components/Event";
 import { logger } from "../utils/DebugLogger";
+import {
+  NoteData,
+  SequencerState,
+  Target,
+  TriggerListener,
+  createInitialState,
+} from "../audio/types";
 
-// Define the trigger listener interface with target to specify polygon A or B
-interface TriggerListener {
-  onTrigger: (index: number) => void;
-  target: "A" | "B"; // Which polygon this listener is for
-}
-
-// Define types for our sequencer state
-interface NoteData {
-  pitch: number;
-  velocity: number;
-}
-
-interface SequencerState {
-  events: {
-    notes: NoteData[];
-    active: boolean[];
-  };
-  visualEvents: Event[]; // Array of Event objects for visual representation
-
-  // Separate properties for A and B polygons
-  numEvents: {
-    A: number;
-    B: number;
-  };
-
-  noteWindowOffset: {
-    A: number;
-    B: number;
-  };
+// Additional interface for visual events (not in types.ts)
+interface VisualState {
+  visualEvents: Event[];
 }
 
 // ** ** ** LOGGER DEBUG MODE ** ** **
@@ -48,14 +29,17 @@ logger.setDebugMode(true);
 
 // Create context with updated type definition
 const SequencerContext = createContext<{
-  state: SequencerState;
-  toggleEvent: (index: number, newActiveState?: boolean) => void;
+  state: SequencerState & VisualState;
+  toggleEvent: (index: number, active: boolean, target: Target) => void;
   setNote: (index: number, note: NoteData) => void;
   setRnboDevice: React.Dispatch<any>;
-  triggerEvent: (index: number, target: "A" | "B") => void;
+  triggerEvent: (index: number, target: Target) => void;
   registerTriggerListener: (listener: TriggerListener) => () => void;
-  setNumEvents: (num: number, target: "A" | "B") => void;
-  setNoteWindowOffset: (offset: number, target: "A" | "B") => void;
+  setNumEvents: (num: number, target: Target) => void;
+  setStartIndex: (index: number, target: Target) => void;
+  setNumCorners: (sides: number, target: Target) => void;
+  getAbsoluteIndex: (relativeIndex: number, target: Target) => number;
+  getRelativeIndex: (absoluteIndex: number, target: Target) => number;
 }>(null!);
 
 // Hook for using the sequencer context
@@ -70,68 +54,24 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
   // Use a ref to store trigger listeners to avoid unnecessary re-renders
   const triggerListenersRef = useRef<TriggerListener[]>([]);
 
-  // Initial state with dummy data
-  const [state, setState] = useState<SequencerState>(() => {
-    // Initial note and active data
-    const initialNotes = [
-      { pitch: 55, velocity: 110 },
-      { pitch: 62, velocity: 80 },
-      { pitch: 60, velocity: 100 },
-      { pitch: 65, velocity: 80 },
-      { pitch: 67, velocity: 100 },
-      { pitch: 70, velocity: 80 },
-      { pitch: 63, velocity: 100 },
-      { pitch: 72, velocity: 99 },
-      { pitch: 60, velocity: 100 },
-      { pitch: 62, velocity: 80 },
-      { pitch: 63, velocity: 100 },
-      { pitch: 65, velocity: 80 },
-      { pitch: 67, velocity: 100 },
-      { pitch: 58, velocity: 80 },
-      { pitch: 60, velocity: 100 },
-      { pitch: 72, velocity: 80 },
-    ];
+  // Initial state with data from factory function
+  const [state, setState] = useState<SequencerState & VisualState>(() => {
+    const initialState = createInitialState();
 
-    const initialActive = [
-      true,
-      true,
-      true,
-      true,
-      true,
-      true,
-      true,
-      true,
-      true,
-      true,
-      true,
-      true,
-      true,
-      true,
-      true,
-      true,
-    ];
+    // Create visual Event objects based on initial data - initial active
+    // is true if active in either A or B (logical OR)
+    const visualEvents = initialState.events.notes.map((note, index) => {
+      const isActiveA = initialState.polygons.A.activeEvents[index];
+      const isActiveB = initialState.polygons.B.activeEvents[index];
+      const isActive = isActiveA || isActiveB;
 
-    // Create visual Event objects based on initial data
-    const visualEvents = initialNotes.map((note, index) => {
-      const event = new Event(index, note.pitch, initialActive[index]);
+      const event = new Event(index, note.pitch, isActive);
       return event;
     });
 
     return {
-      events: {
-        notes: initialNotes,
-        active: initialActive,
-      },
-      visualEvents: visualEvents,
-      // Initialize separate values for A and B
-      numEvents: {
-        A: 8, // Default to 8 events for A
-        B: 5, // Default to 5 events for B
-      },
-      noteWindowOffset: {
-        A: 0, // Start at the beginning (0%) for A
-        B: 0, // Start at the beginning (0%) for B
-      },
+      ...initialState,
+      visualEvents,
     };
   });
 
@@ -157,7 +97,7 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [rnboDevice, state]);
 
   // Function to sync state to RNBO
-  const syncToRNBO = (state: SequencerState, device: any) => {
+  const syncToRNBO = (state: SequencerState & VisualState, device: any) => {
     if (!device || typeof device.scheduleEvent !== "function") {
       logger.error(
         "RNBO device is not properly initialized or does not support scheduleEvent"
@@ -179,61 +119,122 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
       } catch (error) {
         logger.error(`Error scheduling event for note ${index}:`, error);
       }
-
-      // Also update active state
-      const activeEvent = new MessageEvent(TimeNow, "update_active", [
-        index, // Absolute index in the sequence
-        state.events.active[index] ? 1 : 0,
-      ]);
-      try {
-        device.scheduleEvent(activeEvent);
-      } catch (error) {
-        logger.error(
-          `Error scheduling active state for event ${index}:`,
-          error
-        );
-      }
     });
 
-    // Send the current start_index for both A and B
+    // Sync active states for both polygons
+    syncActiveStates(state, device);
+
+    // Send the current startIndex for both A and B
     // For A
-    const maxOffsetA = state.events.notes.length - state.numEvents.A;
-    const startIndexA = Math.round(state.noteWindowOffset.A * maxOffsetA);
     const startIndexEventA = new MessageEvent(TimeNow, "start_index_A", [
-      startIndexA,
+      state.polygons.A.startIndex,
     ]);
 
     try {
       device.scheduleEvent(startIndexEventA);
-      logger.log(`Sent start_index_A: ${startIndexA} to RNBO device`);
+      logger.log(
+        `Sent start_index_A: ${state.polygons.A.startIndex} to RNBO device`
+      );
     } catch (error) {
       logger.error(`Error sending start_index_A to RNBO device:`, error);
     }
 
     // For B
-    const maxOffsetB = state.events.notes.length - state.numEvents.B;
-    const startIndexB = Math.round(state.noteWindowOffset.B * maxOffsetB);
     const startIndexEventB = new MessageEvent(TimeNow, "start_index_B", [
-      startIndexB,
+      state.polygons.B.startIndex,
     ]);
 
     try {
       device.scheduleEvent(startIndexEventB);
-      logger.log(`Sent start_index_B: ${startIndexB} to RNBO device`);
+      logger.log(
+        `Sent start_index_B: ${state.polygons.B.startIndex} to RNBO device`
+      );
     } catch (error) {
       logger.error(`Error sending start_index_B to RNBO device:`, error);
     }
+
+    // Sync polygon sides (numCorners)
+    syncNumCorners(state, device);
   };
 
-  // Calculate the current window start index for each target
-  const getWindowStartIndex = useCallback(
-    (target: "A" | "B") => {
-      const numEvents = state.numEvents[target];
-      const offset = state.noteWindowOffset[target];
-      const maxOffset = state.events.notes.length - numEvents;
-      return Math.round(offset * maxOffset);
+  // Helper to sync active states for both polygons
+  const syncActiveStates = (
+    state: SequencerState & VisualState,
+    device: any
+  ) => {
+    // For polygon A, sync active states within current window
+    for (let i = 0; i < state.polygons.A.numEvents; i++) {
+      const absoluteIndex = state.polygons.A.startIndex + i;
+      if (absoluteIndex < state.events.notes.length) {
+        const activeEvent = new MessageEvent(TimeNow, "update_active_A", [
+          i, // Relative index within window
+          state.polygons.A.activeEvents[absoluteIndex] ? 1 : 0,
+        ]);
+        try {
+          device.scheduleEvent(activeEvent);
+        } catch (error) {
+          logger.error(
+            `Error syncing active state for A at index ${i}:`,
+            error
+          );
+        }
+      }
+    }
+
+    // For polygon B, sync active states within current window
+    for (let i = 0; i < state.polygons.B.numEvents; i++) {
+      const absoluteIndex = state.polygons.B.startIndex + i;
+      if (absoluteIndex < state.events.notes.length) {
+        const activeEvent = new MessageEvent(TimeNow, "update_active_B", [
+          i, // Relative index within window
+          state.polygons.B.activeEvents[absoluteIndex] ? 1 : 0,
+        ]);
+        try {
+          device.scheduleEvent(activeEvent);
+        } catch (error) {
+          logger.error(
+            `Error syncing active state for B at index ${i}:`,
+            error
+          );
+        }
+      }
+    }
+  };
+
+  // Helper to sync polygon numCorners
+  const syncNumCorners = (state: SequencerState & VisualState, device: any) => {
+    // Set numCorners_A parameter
+    const numCorners_AParam = device.parameters.find(
+      (p: { name: string }) => p.name === "numCorners_A"
+    );
+    if (numCorners_AParam) {
+      numCorners_AParam.value = state.polygons.A.numCorners;
+      logger.log(`Set numCorners_A to ${state.polygons.A.numCorners}`);
+    }
+
+    // Set numCorners_B parameter
+    const numCorners_BParam = device.parameters.find(
+      (p: { name: string }) => p.name === "numCorners_B"
+    );
+    if (numCorners_BParam) {
+      numCorners_BParam.value = state.polygons.B.numCorners;
+      logger.log(`Set numCorners_B to ${state.polygons.B.numCorners}`);
+    }
+  };
+
+  // Conversion functions between absolute and relative indices
+  const getAbsoluteIndex = useCallback(
+    (relativeIndex: number, target: Target): number => {
+      return state.polygons[target].startIndex + relativeIndex;
     },
-    [state.events.notes.length, state.numEvents, state.noteWindowOffset]
+    [state]
+  );
+
+  const getRelativeIndex = useCallback(
+    (absoluteIndex: number, target: Target): number => {
+      return absoluteIndex - state.polygons[target].startIndex;
+    },
+    [state]
   );
 
   // Register a trigger listener with target
@@ -248,100 +249,75 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, []);
 
-  // Toggle event active state with option to set specific state
+  // Toggle event active state for specific target
   const toggleEvent = useCallback(
-    (index: number, newActiveState?: boolean) => {
-      if (index < 0 || index >= state.events.active.length) return;
+    (index: number, active: boolean, target: Target) => {
+      if (index < 0 || index >= state.events.notes.length) return;
 
-      // Log the operation we're about to perform
       logger.log(
-        `SequencerProvider: ${
-          newActiveState !== undefined ? "Setting" : "Toggling"
-        } event ${index} ${
-          newActiveState !== undefined
-            ? `to ${newActiveState}`
-            : "to opposite state"
-        }`
+        `SequencerProvider: Setting event ${index} to ${active} for ${target}`
       );
 
       setState((prev) => {
-        // Determine the new active state
-        const isActive =
-          newActiveState !== undefined
-            ? newActiveState
-            : !prev.events.active[index];
+        // Create new active arrays for the specific target
+        const newActiveEvents = [...prev.polygons[target].activeEvents];
+        newActiveEvents[index] = active;
 
-        // Create a new active array with the updated value
-        const newActive = [...prev.events.active];
-        newActive[index] = isActive;
+        // Update visual event active state based on whether it's active in either A or B
+        const isActiveInA =
+          target === "A" ? active : prev.polygons.A.activeEvents[index];
+        const isActiveInB =
+          target === "B" ? active : prev.polygons.B.activeEvents[index];
+        const isActiveInEither = isActiveInA || isActiveInB;
 
-        // Update the visual Event object
+        // Create new visualEvents array with updated active state
         const newVisualEvents = [...prev.visualEvents];
         if (newVisualEvents[index]) {
-          newVisualEvents[index].setActive(isActive);
+          newVisualEvents[index].setActive(isActiveInEither);
         }
 
-        const newState = {
+        // Return updated state
+        return {
           ...prev,
-          events: {
-            ...prev.events,
-            active: newActive,
+          polygons: {
+            ...prev.polygons,
+            [target]: {
+              ...prev.polygons[target],
+              activeEvents: newActiveEvents,
+            },
           },
           visualEvents: newVisualEvents,
         };
-
-        // Send update to RNBO - but only if we have a device
-        if (rnboDeviceRef.current) {
-          // For both A and B, we need to check if the index is in the current window
-          // and update accordingly
-
-          // Check for A
-          const startIndexA = getWindowStartIndex("A");
-          if (index >= startIndexA && index < startIndexA + prev.numEvents.A) {
-            const relativeIndexA = index - startIndexA;
-            const eventA = new MessageEvent(TimeNow, "update_active", [
-              relativeIndexA, // RNBO expects relative indices within the window
-              isActive ? 1 : 0,
-            ]);
-            rnboDeviceRef.current.scheduleEvent(eventA);
-            logger.log(
-              `Sent update_active for A: [${relativeIndexA}, ${
-                isActive ? 1 : 0
-              }] to RNBO (from absolute index ${index})`
-            );
-          }
-
-          // Check for B
-          const startIndexB = getWindowStartIndex("B");
-          if (index >= startIndexB && index < startIndexB + prev.numEvents.B) {
-            const relativeIndexB = index - startIndexB;
-            const eventB = new MessageEvent(TimeNow, "update_active", [
-              relativeIndexB, // RNBO expects relative indices within the window
-              isActive ? 1 : 0,
-            ]);
-            rnboDeviceRef.current.scheduleEvent(eventB);
-            logger.log(
-              `Sent update_active for B: [${relativeIndexB}, ${
-                isActive ? 1 : 0
-              }] to RNBO (from absolute index ${index})`
-            );
-          }
-
-          // If the index is outside both windows, just log it
-          if (
-            (index < startIndexA || index >= startIndexA + prev.numEvents.A) &&
-            (index < startIndexB || index >= startIndexB + prev.numEvents.B)
-          ) {
-            logger.log(
-              `Event ${index} updated but is outside both current windows, not sending to RNBO`
-            );
-          }
-        }
-
-        return newState;
       });
+
+      // Send update to RNBO if device is available
+      if (rnboDeviceRef.current) {
+        // Convert to relative index for the target
+        const relativeIndex = getRelativeIndex(index, target);
+
+        // Only send to RNBO if the event is within the current window
+        if (
+          relativeIndex >= 0 &&
+          relativeIndex < state.polygons[target].numEvents
+        ) {
+          const event = new MessageEvent(TimeNow, `update_active_${target}`, [
+            relativeIndex,
+            active ? 1 : 0,
+          ]);
+          rnboDeviceRef.current.scheduleEvent(event);
+          logger.log(
+            `Sent update_active_${target}: [${relativeIndex}, ${
+              active ? 1 : 0
+            }] to RNBO`
+          );
+        } else {
+          logger.log(
+            `Event ${index} updated but is outside ${target}'s current window, not sending to RNBO`
+          );
+        }
+      }
     },
-    [state.events.active.length, getWindowStartIndex]
+    [state, getRelativeIndex]
   );
 
   // Set note data for an event
@@ -359,7 +335,7 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
           newVisualEvents[index].noteValue = note.pitch;
         }
 
-        const newState = {
+        return {
           ...prev,
           events: {
             ...prev.events,
@@ -367,31 +343,34 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
           },
           visualEvents: newVisualEvents,
         };
-
-        // Send update to RNBO
-        if (rnboDeviceRef.current) {
-          const event = new MessageEvent(TimeNow, "update_note", [
-            index,
-            note.pitch,
-            note.velocity,
-          ]);
-          rnboDeviceRef.current.scheduleEvent(event);
-        }
-
-        return newState;
       });
+
+      // Send update to RNBO
+      if (rnboDeviceRef.current) {
+        const event = new MessageEvent(TimeNow, "update_note", [
+          index,
+          note.pitch,
+          note.velocity,
+        ]);
+        rnboDeviceRef.current.scheduleEvent(event);
+        logger.log(
+          `Sent update_note: [${index}, ${note.pitch}, ${note.velocity}] to RNBO`
+        );
+      }
     },
     [state.events.notes.length]
   );
 
-  // Trigger visual event and notify listeners - now with target
+  // Trigger visual event and notify listeners for specific target
   const triggerEvent = useCallback(
-    (index: number, target: "A" | "B") => {
-      // The index from RNBO is now an absolute index in the sequence
-      // We just need to make sure it's in range for the visual events
-      if (index < 0 || index >= state.visualEvents.length) {
+    (index: number, target: Target) => {
+      // Convert relative index from RNBO to absolute index
+      const absoluteIndex = getAbsoluteIndex(index, target);
+
+      // Validate the index
+      if (absoluteIndex < 0 || absoluteIndex >= state.visualEvents.length) {
         logger.warn(
-          `Trigger index ${index} out of range (0-${
+          `Trigger absolute index ${absoluteIndex} out of range (0-${
             state.visualEvents.length - 1
           })`
         );
@@ -399,67 +378,44 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       logger.log(
-        `SequencerProvider: Triggering event ${index} for ${target}, active: ${state.events.active[index]}`
+        `SequencerProvider: Triggering event ${absoluteIndex} for ${target}, active: ${state.polygons[target].activeEvents[absoluteIndex]}`
       );
 
-      // Only update if the event is active
-      if (state.events.active[index]) {
+      // Only update if the event is active for this target
+      if (state.polygons[target].activeEvents[absoluteIndex]) {
         // Directly trigger the event object
-        const triggered = state.visualEvents[index].trigger();
+        const triggered = state.visualEvents[absoluteIndex].trigger();
 
         if (triggered) {
           // Force a state update to reflect the trigger animation
-          setState((prev) => {
-            // Create a new array with the same objects to force a re-render
-            const newVisualEvents = [...prev.visualEvents];
-
-            return {
-              ...prev,
-              visualEvents: newVisualEvents,
-            };
-          });
+          setState((prev) => ({
+            ...prev,
+            visualEvents: [...prev.visualEvents], // Create new array to force re-render
+          }));
 
           logger.log(
-            `SequencerProvider: Event ${index} triggered successfully for ${target}`
+            `SequencerProvider: Event ${absoluteIndex} triggered successfully for ${target}`
           );
         }
-      }
 
-      // For the ring visualization, we need to convert the absolute index
-      // to a relative index within the current window for the specific target
-      const startIndex = getWindowStartIndex(target);
-      const numEvents = state.numEvents[target];
-
-      // Only trigger ring visualization if the event is in the current window
-      if (index >= startIndex && index < startIndex + numEvents) {
-        const relativeIndex = index - startIndex;
-
-        logger.log(
-          `SequencerProvider: Notifying listeners of trigger at relative index ${relativeIndex} for ${target}`
-        );
-
-        // Notify only listeners for this target with the relative index
+        // Notify listeners for this target with the relative index
         triggerListenersRef.current
           .filter((listener) => listener.target === target)
           .forEach((listener) => {
             try {
-              listener.onTrigger(relativeIndex);
+              listener.onTrigger(index); // Using original relative index
             } catch (err) {
               logger.error(`Error in trigger listener for ${target}:`, err);
             }
           });
       }
     },
-    [
-      state.visualEvents,
-      state.events.active,
-      state.numEvents,
-      getWindowStartIndex,
-    ]
+    [state, getAbsoluteIndex]
   );
 
+  // Set number of events for a specific target
   const setNumEvents = useCallback(
-    (num: number, target: "A" | "B") => {
+    (num: number, target: Target) => {
       const validNum = Math.max(
         1,
         Math.min(state.events.notes.length, Math.round(num))
@@ -468,21 +424,23 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
 
       setState((prev) => ({
         ...prev,
-        numEvents: {
-          ...prev.numEvents,
-          [target]: validNum,
+        polygons: {
+          ...prev.polygons,
+          [target]: {
+            ...prev.polygons[target],
+            numEvents: validNum,
+          },
         },
       }));
 
+      // Update RNBO parameter if device is available
       if (rnboDeviceRef.current) {
-        // Find the correct parameter
         const paramName = `numEvents_${target}`;
         const param = rnboDeviceRef.current.parameters.find(
           (p: { name: string }) => p.name === paramName
         );
 
         if (param) {
-          // Update the parameter in RNBO device
           param.value = validNum;
           logger.log(`Updated RNBO parameter ${paramName} to ${validNum}`);
         } else {
@@ -493,37 +451,38 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
     [state.events.notes.length]
   );
 
-  // Set the position of the note window for target A or B
-  const setNoteWindowOffset = useCallback(
-    (offset: number, target: "A" | "B") => {
-      const validOffset = Math.max(0, Math.min(1, offset));
-      logger.log(`Setting noteWindowOffset for ${target} to ${validOffset}`);
+  // Set the starting index for a specific target
+  const setStartIndex = useCallback(
+    (index: number, target: Target) => {
+      // Ensure index is within valid range
+      const maxStartIndex = Math.max(
+        0,
+        state.events.notes.length - state.polygons[target].numEvents
+      );
+      const validIndex = Math.max(0, Math.min(maxStartIndex, index));
 
-      // Calculate the starting index based on the offset
-      const maxOffset = state.events.notes.length - state.numEvents[target];
-      const startIndex = Math.round(validOffset * maxOffset);
-
-      console.log(`Window for ${target} now starts at index ${startIndex}`);
+      logger.log(`Setting startIndex for ${target} to ${validIndex}`);
 
       setState((prev) => ({
         ...prev,
-        noteWindowOffset: {
-          ...prev.noteWindowOffset,
-          [target]: validOffset,
+        polygons: {
+          ...prev.polygons,
+          [target]: {
+            ...prev.polygons[target],
+            startIndex: validIndex,
+          },
         },
       }));
 
       // Send start_index message to RNBO device
       if (rnboDeviceRef.current) {
-        // Create a message event with the starting index
         const event = new MessageEvent(TimeNow, `start_index_${target}`, [
-          startIndex,
+          validIndex,
         ]);
-
         try {
           rnboDeviceRef.current.scheduleEvent(event);
           logger.log(
-            `Sent start_index_${target}: ${startIndex} to RNBO device`
+            `Sent start_index_${target}: ${validIndex} to RNBO device`
           );
         } catch (error) {
           logger.error(
@@ -533,8 +492,42 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       }
     },
-    [state.events.notes.length, state.numEvents]
+    [state]
   );
+
+  // Set the number of corners for a polygon
+  const setNumCorners = useCallback((sides: number, target: Target) => {
+    // Ensure sides is between 3 and 8
+    const validSides = Math.max(3, Math.min(8, Math.round(sides)));
+
+    logger.log(`Setting numCorners for ${target} to ${validSides}`);
+
+    setState((prev) => ({
+      ...prev,
+      polygons: {
+        ...prev.polygons,
+        [target]: {
+          ...prev.polygons[target],
+          numCorners: validSides,
+        },
+      },
+    }));
+
+    // Update RNBO parameter if device is available
+    if (rnboDeviceRef.current) {
+      const paramName = `numCorners_${target}`;
+      const param = rnboDeviceRef.current.parameters.find(
+        (p: { name: string }) => p.name === paramName
+      );
+
+      if (param) {
+        param.value = validSides;
+        logger.log(`Updated RNBO parameter ${paramName} to ${validSides}`);
+      } else {
+        logger.warn(`Parameter ${paramName} not found in RNBO device`);
+      }
+    }
+  }, []);
 
   // Memoize the context value to prevent unnecessary re-renders
   const contextValue = useMemo(
@@ -546,7 +539,10 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
       triggerEvent,
       registerTriggerListener,
       setNumEvents,
-      setNoteWindowOffset,
+      setStartIndex,
+      setNumCorners,
+      getAbsoluteIndex,
+      getRelativeIndex,
     }),
     [
       state,
@@ -555,7 +551,10 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
       triggerEvent,
       registerTriggerListener,
       setNumEvents,
-      setNoteWindowOffset,
+      setStartIndex,
+      setNumCorners,
+      getAbsoluteIndex,
+      getRelativeIndex,
     ]
   );
 

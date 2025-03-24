@@ -4,6 +4,7 @@ import { useSequencer } from "../../context/SequencerProvider";
 import { logger } from "../../utils/DebugLogger";
 import SeqRangeControl from "./SeqRangeControl";
 import { colors } from "@/app/styles/colors";
+import { Target } from "../../audio/types";
 
 interface SeqEditorProps {
   className?: string;
@@ -45,25 +46,43 @@ const SeqEditor: React.FC<SeqEditorProps> = ({
     return () => window.removeEventListener("resize", updateDimensions);
   }, []);
 
-  const totalSteps = state.events.notes.length;
-  const stepWidth = (dimensions.width * 0.75) / totalSteps;
-  const spacing = (dimensions.width * 0.25) / (totalSteps + 1);
+  const totalNotes = state.events.notes.length;
+  const stepWidth = (dimensions.width * 0.75) / totalNotes;
+  const spacing = (dimensions.width * 0.25) / (totalNotes + 1);
 
-  // Calculate the starting indices and window widths for both polygons
-  const maxOffsetA = totalSteps - state.numEvents.A;
-  const startIndexA = Math.round(state.noteWindowOffset.A * maxOffsetA);
-
-  const maxOffsetB = totalSteps - state.numEvents.B;
-  const startIndexB = Math.round(state.noteWindowOffset.B * maxOffsetB);
+  // Get polygon-specific state for A and B
+  const polygonA = state.polygons.A;
+  const polygonB = state.polygons.B;
 
   // Function to calculate window highlight width for a specific target
-  const calculateHighlightWidth = (target: "A" | "B") => {
-    return (
-      state.numEvents[target] * stepWidth +
-      (state.numEvents[target] - 1) * spacing +
-      spacing +
-      2
+  const calculateHighlightWidth = (target: Target) => {
+    const numEvents = state.polygons[target].numEvents;
+    return numEvents * stepWidth + (numEvents - 1) * spacing + spacing + 2;
+  };
+
+  // Function to determine if a step is active
+  const isStepActive = (index: number) => {
+    return polygonA.activeEvents[index] || polygonB.activeEvents[index];
+  };
+
+  // Function to determine if a step is in a polygon's window
+  const isInWindow = (index: number, target: Target) => {
+    const { startIndex, numEvents } = state.polygons[target];
+    return index >= startIndex && index < startIndex + numEvents;
+  };
+
+  // Handler for pitch value changes
+  const handlePitchChange = (index: number, newPitch: number) => {
+    const note = state.events.notes[index];
+    logger.log(
+      `Step ${index} pitch changing from ${note.pitch} to ${newPitch}`
     );
+
+    // Use the setNote function from context
+    setNote(index, {
+      ...note,
+      pitch: newPitch,
+    });
   };
 
   return (
@@ -72,7 +91,7 @@ const SeqEditor: React.FC<SeqEditorProps> = ({
         <SeqRangeControl
           target="A"
           minPossibleValue={0}
-          maxPossibleValue={totalSteps - 1}
+          maxPossibleValue={totalNotes - 1}
           minRangeSize={3}
           handleColor={selectorAColor}
           trackColor={cellBGColor}
@@ -86,7 +105,7 @@ const SeqEditor: React.FC<SeqEditorProps> = ({
         <SeqRangeControl
           target="B"
           minPossibleValue={0}
-          maxPossibleValue={totalSteps - 1}
+          maxPossibleValue={totalNotes - 1}
           minRangeSize={3}
           handleColor={selectorBColor}
           trackColor={cellBGColor}
@@ -106,26 +125,11 @@ const SeqEditor: React.FC<SeqEditorProps> = ({
           <div className="absolute inset-0">
             {state.events.notes.map((note, index) => {
               // Calculate if this step is in either current window
-              const inWindowA =
-                index >= startIndexA && index < startIndexA + state.numEvents.A;
-              const inWindowB =
-                index >= startIndexB && index < startIndexB + state.numEvents.B;
+              const inWindowA = isInWindow(index, "A");
+              const inWindowB = isInWindow(index, "B");
 
               // Consider a step "in current window" if it's in either window
               const inCurrentWindow = inWindowA || inWindowB;
-
-              // Handler for pitch value changes
-              const handlePitchChange = (index: number, newPitch: number) => {
-                logger.log(
-                  `Step ${index} pitch changing from ${note.pitch} to ${newPitch}`
-                );
-
-                // Use the setNote function from context
-                setNote(index, {
-                  ...note,
-                  pitch: newPitch,
-                });
-              };
 
               return (
                 <StepCell
@@ -135,7 +139,7 @@ const SeqEditor: React.FC<SeqEditorProps> = ({
                   width={stepWidth}
                   height={height - 8} // Leave some margin
                   x={spacing + index * (stepWidth + spacing)}
-                  isActive={state.events.active[index]}
+                  isActive={isStepActive(index)}
                   inCurrentWindow={inCurrentWindow}
                   minValue={minValue}
                   maxValue={maxValue}
@@ -155,7 +159,7 @@ const SeqEditor: React.FC<SeqEditorProps> = ({
               left:
                 spacing -
                 spacing / 2 +
-                state.noteWindowOffset.A * maxOffsetA * (stepWidth + spacing),
+                polygonA.startIndex * (stepWidth + spacing),
               top: 0,
               width: calculateHighlightWidth("A"),
               height: height,
@@ -173,7 +177,7 @@ const SeqEditor: React.FC<SeqEditorProps> = ({
               left:
                 spacing -
                 spacing / 2 +
-                state.noteWindowOffset.B * maxOffsetB * (stepWidth + spacing),
+                polygonB.startIndex * (stepWidth + spacing),
               top: 0,
               width: calculateHighlightWidth("B"),
               height: height,

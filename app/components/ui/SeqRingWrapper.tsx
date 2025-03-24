@@ -3,9 +3,10 @@ import { useSequencer } from "../../context/SequencerProvider";
 import SeqRing, { RingRef } from "./SeqRing";
 import { logger } from "../../utils/DebugLogger";
 import { colors } from "../../../app/styles/colors";
+import { Target } from "../../audio/types";
 
 interface SeqRingWrapperProps {
-  target: "A" | "B"; // Which polygon this ring is for
+  target: Target; // Which polygon this ring is for
   radius?: number;
   markerSize?: number;
   posZ?: number;
@@ -17,7 +18,9 @@ const SeqRingWrapper: React.FC<SeqRingWrapperProps> = ({
   markerSize = 0.15,
   posZ = 0,
 }) => {
-  const { state, toggleEvent, registerTriggerListener } = useSequencer();
+  const { state, toggleEvent, registerTriggerListener, getAbsoluteIndex } =
+    useSequencer();
+
   const ringRef = useRef<RingRef>(null);
 
   useEffect(() => {
@@ -28,8 +31,11 @@ const SeqRingWrapper: React.FC<SeqRingWrapperProps> = ({
 
     const listener = {
       onTrigger: (relativeIndex: number) => {
-        // The index is now relative to the window - directly usable by SeqRing
-        if (relativeIndex >= 0 && relativeIndex < state.numEvents[target]) {
+        // The index is relative to the window - directly usable by SeqRing
+        if (
+          relativeIndex >= 0 &&
+          relativeIndex < state.polygons[target].numEvents
+        ) {
           if (ringRef.current) {
             ringRef.current.triggerEvent(relativeIndex);
           }
@@ -40,36 +46,40 @@ const SeqRingWrapper: React.FC<SeqRingWrapperProps> = ({
 
     const unregister = registerTriggerListener(listener);
     return unregister;
-  }, [registerTriggerListener, state.numEvents, target]);
-
-  // Calculate the starting index based on the offset for the specific target
-  const maxOffset = state.events.notes.length - state.numEvents[target];
-  const startIndex = Math.round(state.noteWindowOffset[target] * maxOffset);
+  }, [registerTriggerListener, state.polygons, target]);
 
   // Get only the notes and active states for the visible events based on the window position
+  const { startIndex, numEvents } = state.polygons[target];
+
+  // Get visible notes for the current window
   const visibleNotes = state.events.notes.slice(
     startIndex,
-    startIndex + state.numEvents[target]
+    startIndex + numEvents
   );
-  const visibleActive = state.events.active.slice(
+
+  // Get visible active events for the current target
+  const visibleActive = state.polygons[target].activeEvents.slice(
     startIndex,
-    startIndex + state.numEvents[target]
+    startIndex + numEvents
   );
 
   // Create a handler that adjusts the index based on window position
   const handleEventToggle = useCallback(
     (localIndex: number, newActiveState: boolean) => {
-      const actualIndex = startIndex + localIndex;
-      if (actualIndex < state.events.active.length) {
-        // IMPORTANT: We call toggleEvent with the new state directly
-        // This ensures SequencerProvider knows exactly what state we want
+      // Convert local index to absolute index
+      const absoluteIndex = getAbsoluteIndex(localIndex, target);
+
+      // Ensure it's a valid index
+      if (absoluteIndex < state.events.notes.length) {
         logger.log(
-          `SeqRingWrapper (${target}): Toggling event ${actualIndex} to ${newActiveState}`
+          `SeqRingWrapper (${target}): Toggling event ${absoluteIndex} to ${newActiveState}`
         );
-        toggleEvent(actualIndex, newActiveState);
+
+        // Call toggleEvent with absolute index, new state, and target
+        toggleEvent(absoluteIndex, newActiveState, target);
       }
     },
-    [startIndex, state.events.active.length, toggleEvent, target]
+    [state.events.notes.length, toggleEvent, target, getAbsoluteIndex]
   );
 
   return (
@@ -77,7 +87,7 @@ const SeqRingWrapper: React.FC<SeqRingWrapperProps> = ({
       ref={ringRef}
       radius={radius}
       posZ={posZ}
-      eventCount={state.numEvents[target]}
+      eventCount={numEvents}
       markerSize={markerSize}
       ringColor={colors.ring}
       activeColor={colors.marker.active}

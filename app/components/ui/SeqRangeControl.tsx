@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useSequencer } from "../../context/SequencerProvider";
+import { Target } from "../../audio/types";
 
 interface SeqRangeControlProps {
-  target: "A" | "B";
+  target: Target;
   className?: string;
   minPossibleValue?: number;
   maxPossibleValue?: number;
@@ -24,7 +25,7 @@ const SeqRangeControl: React.FC<SeqRangeControlProps> = ({
   rangeColor = "#4080bf",
   height = 30,
 }) => {
-  const { state, setNumEvents, setNoteWindowOffset } = useSequencer();
+  const { state, setNumEvents, setStartIndex } = useSequencer();
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0 });
 
@@ -38,15 +39,16 @@ const SeqRangeControl: React.FC<SeqRangeControlProps> = ({
     startMaxValue: 0,
   });
 
-  // Calculate local min and max from the sequencer state for this target
-  const totalSteps = state.events.notes.length;
-  const maxOffset = totalSteps - state.numEvents[target];
-  const startIndex = Math.round(state.noteWindowOffset[target] * maxOffset);
-  const endIndex = startIndex + state.numEvents[target] - 1;
+  // Get current polygon state
+  const { startIndex: currentStartIndex, numEvents: currentNumEvents } =
+    state.polygons[target];
 
-  // Local state for min and max values
-  const [minValue, setMinValue] = useState(startIndex);
-  const [maxValue, setMaxValue] = useState(endIndex);
+  // Calculate the end index (inclusive)
+  const currentEndIndex = currentStartIndex + currentNumEvents - 1;
+
+  // Local state for min and max values (start and end indices)
+  const [minValue, setMinValue] = useState(currentStartIndex);
+  const [maxValue, setMaxValue] = useState(currentEndIndex);
 
   // Calculate range size (inclusive of both min and max)
   const getRangeSize = (min: number, max: number): number => {
@@ -97,15 +99,10 @@ const SeqRangeControl: React.FC<SeqRangeControlProps> = ({
   useEffect(() => {
     if (dragType === null) {
       // Only update when not dragging to prevent jumps
-      const newStartIndex = Math.round(
-        state.noteWindowOffset[target] * maxOffset
-      );
-      const newEndIndex = newStartIndex + state.numEvents[target] - 1;
-
-      setMinValue(newStartIndex);
-      setMaxValue(newEndIndex);
+      setMinValue(currentStartIndex);
+      setMaxValue(currentEndIndex);
     }
-  }, [state.noteWindowOffset, state.numEvents, maxOffset, dragType, target]);
+  }, [currentStartIndex, currentEndIndex, dragType]);
 
   // Calculate pixel positions for handles to align with StepCells
   const getPositionFromValue = (value: number): number => {
@@ -229,12 +226,6 @@ const SeqRangeControl: React.FC<SeqRangeControlProps> = ({
     // Calculate and apply changes to the sequencer state
     const rangeSize = getRangeSize(minValue, maxValue);
 
-    // Protect against division by zero or negative maxOffset
-    let newOffset = 0;
-    if (maxOffset > 0) {
-      newOffset = Math.max(0, Math.min(1, minValue / maxOffset));
-    }
-
     console.log({
       minValue,
       maxValue,
@@ -245,7 +236,7 @@ const SeqRangeControl: React.FC<SeqRangeControlProps> = ({
     // Apply state changes - check that range meets minimum size
     if (rangeSize >= minRangeSize) {
       setNumEvents(rangeSize, target);
-      setNoteWindowOffset(newOffset, target);
+      setStartIndex(minValue, target);
     }
 
     // Reset drag state

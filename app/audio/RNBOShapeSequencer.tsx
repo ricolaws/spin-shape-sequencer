@@ -9,8 +9,6 @@ import { logger } from "../utils/DebugLogger";
 
 interface Props {
   onAngleChange?: (angle: number) => void;
-  onNumCorners_AChange?: (numCorners: number) => void;
-  onNumCorners_BChange?: (numCorners: number) => void;
 }
 
 // Define the list of parameters to display and their order
@@ -27,18 +25,16 @@ const DISPLAY_PARAMETERS = [
 // Define which parameters should use float values (all others use integers)
 const FLOAT_PARAMETERS = ["speed", "balance"];
 
-const RNBOShapeSequencer = ({
-  onAngleChange,
-  onNumCorners_AChange,
-  onNumCorners_BChange,
-}: Props) => {
+const RNBOShapeSequencer = ({ onAngleChange }: Props) => {
   const {
     state,
     setRnboDevice,
     triggerEvent,
     setNumEvents,
-    setNoteWindowOffset,
+    setStartIndex,
+    setNumCorners,
   } = useSequencer();
+
   const [parameters, setParameters] = useState<Parameter[]>([]);
   const [deviceStatus, setDeviceStatus] = useState("Initializing...");
   const messageSubscriptionRef = useRef<{ unsubscribe: () => void } | null>(
@@ -53,28 +49,25 @@ const RNBOShapeSequencer = ({
   const setRnboDeviceRef = useRef(setRnboDevice);
   const triggerEventRef = useRef(triggerEvent);
   const setNumEventsRef = useRef(setNumEvents);
-  const setNoteWindowOffsetRef = useRef(setNoteWindowOffset);
+  const setStartIndexRef = useRef(setStartIndex);
+  const setNumCornersRef = useRef(setNumCorners);
   const onAngleChangeRef = useRef(onAngleChange);
-  const onNumCorners_AChangeRef = useRef(onNumCorners_AChange);
-  const onNumCorners_BChangeRef = useRef(onNumCorners_BChange);
 
   // Update refs when props change (without triggering effect reruns)
   useEffect(() => {
     onAngleChangeRef.current = onAngleChange;
-    onNumCorners_AChangeRef.current = onNumCorners_AChange;
-    onNumCorners_BChangeRef.current = onNumCorners_BChange;
     setRnboDeviceRef.current = setRnboDevice;
     triggerEventRef.current = triggerEvent;
     setNumEventsRef.current = setNumEvents;
-    setNoteWindowOffsetRef.current = setNoteWindowOffset;
+    setStartIndexRef.current = setStartIndex;
+    setNumCornersRef.current = setNumCorners;
   }, [
     onAngleChange,
-    onNumCorners_AChange,
-    onNumCorners_BChange,
     setRnboDevice,
     triggerEvent,
     setNumEvents,
-    setNoteWindowOffset,
+    setStartIndex,
+    setNumCorners,
   ]);
 
   useEffect(() => {
@@ -91,27 +84,20 @@ const RNBOShapeSequencer = ({
           setRnboDeviceRef.current(device);
         }
 
-        // Initialize numCorners_A value
-        if (onNumCorners_AChangeRef.current) {
+        // Initialize numCorners_A and numCorners_B values
+        if (setNumCornersRef.current) {
           const numCorners_AParam = device.parameters.find(
             (p) => p.name === "numCorners_A"
           );
           if (numCorners_AParam) {
-            onNumCorners_AChangeRef.current(
-              Math.round(numCorners_AParam.value)
-            );
+            setNumCornersRef.current(Math.round(numCorners_AParam.value), "A");
           }
-        }
 
-        // Initialize numCorners_B value
-        if (onNumCorners_BChangeRef.current) {
           const numCorners_BParam = device.parameters.find(
             (p) => p.name === "numCorners_B"
           );
           if (numCorners_BParam) {
-            onNumCorners_BChangeRef.current(
-              Math.round(numCorners_BParam.value)
-            );
+            setNumCornersRef.current(Math.round(numCorners_BParam.value), "B");
           }
         }
 
@@ -143,10 +129,10 @@ const RNBOShapeSequencer = ({
           }
         }
 
-        // Send initial start_index of 0 for both A and B
-        if (typeof setNoteWindowOffsetRef.current === "function") {
-          setNoteWindowOffsetRef.current(0, "A");
-          setNoteWindowOffsetRef.current(0, "B");
+        // Send initial startIndex of 0 for both A and B
+        if (typeof setStartIndexRef.current === "function") {
+          setStartIndexRef.current(0, "A");
+          setStartIndexRef.current(0, "B");
         }
 
         // Filter parameters to only include those in DISPLAY_PARAMETERS list
@@ -225,12 +211,12 @@ const RNBOShapeSequencer = ({
         param.value = value;
 
         // Special handling for specific parameters
-        if (param.name === "numCorners_A" && onNumCorners_AChangeRef.current) {
-          onNumCorners_AChangeRef.current(Math.round(value));
+        if (param.name === "numCorners_A" && setNumCornersRef.current) {
+          setNumCornersRef.current(Math.round(value), "A");
         }
 
-        if (param.name === "numCorners_B" && onNumCorners_BChangeRef.current) {
-          onNumCorners_BChangeRef.current(Math.round(value));
+        if (param.name === "numCorners_B" && setNumCornersRef.current) {
+          setNumCornersRef.current(Math.round(value), "B");
         }
 
         // Handle numEvents_A parameter
@@ -243,11 +229,11 @@ const RNBOShapeSequencer = ({
 
           logger.log("RNBOShapeSequencer: set num events: ", { value });
 
-          // When numEvents changes, we need to ensure the window offset is still valid
-          // If the window offset would cause events to go out of bounds, adjust it
-          if (typeof setNoteWindowOffsetRef.current === "function") {
-            // Check and possibly adjust the window offset for A
-            setNoteWindowOffsetRef.current(state.noteWindowOffset.A, "A");
+          // When numEvents changes, we need to ensure the startIndex is still valid
+          // If the startIndex would cause events to go out of bounds, adjust it
+          if (typeof setStartIndexRef.current === "function") {
+            // Check and possibly adjust the startIndex for A
+            setStartIndexRef.current(state.polygons.A.startIndex, "A");
           }
         }
 
@@ -259,11 +245,11 @@ const RNBOShapeSequencer = ({
           // We don't need to sync to RNBO since the slider already did that
           setNumEventsRef.current(Math.round(value), "B");
 
-          // When numEvents changes, we need to ensure the window offset is still valid
-          // If the window offset would cause events to go out of bounds, adjust it
-          if (typeof setNoteWindowOffsetRef.current === "function") {
-            // Check and possibly adjust the window offset for B
-            setNoteWindowOffsetRef.current(state.noteWindowOffset.B, "B");
+          // When numEvents changes, we need to ensure the startIndex is still valid
+          // If the startIndex would cause events to go out of bounds, adjust it
+          if (typeof setStartIndexRef.current === "function") {
+            // Check and possibly adjust the startIndex for B
+            setStartIndexRef.current(state.polygons.B.startIndex, "B");
           }
         }
       }
@@ -305,7 +291,7 @@ const RNBOShapeSequencer = ({
         />
       );
     });
-  }, [parameters, state.noteWindowOffset]);
+  }, [parameters, state.polygons.A.startIndex, state.polygons.B.startIndex]);
 
   return (
     <div className="w-1/2 p-4 border rounded-md bg-[var(--foreground)] text-white">
