@@ -44,7 +44,7 @@ interface SequencerState {
 }
 
 // ** ** ** LOGGER DEBUG MODE ** ** **
-logger.setDebugMode(false);
+logger.setDebugMode(true);
 
 // Create context with updated type definition
 const SequencerContext = createContext<{
@@ -458,7 +458,6 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
     ]
   );
 
-  // Set the number of events to display for target A or B
   const setNumEvents = useCallback(
     (num: number, target: "A" | "B") => {
       const validNum = Math.max(
@@ -474,6 +473,22 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
           [target]: validNum,
         },
       }));
+
+      if (rnboDeviceRef.current) {
+        // Find the correct parameter
+        const paramName = `numEvents_${target}`;
+        const param = rnboDeviceRef.current.parameters.find(
+          (p: { name: string }) => p.name === paramName
+        );
+
+        if (param) {
+          // Update the parameter in RNBO device
+          param.value = validNum;
+          logger.log(`Updated RNBO parameter ${paramName} to ${validNum}`);
+        } else {
+          logger.warn(`Parameter ${paramName} not found in RNBO device`);
+        }
+      }
     },
     [state.events.notes.length]
   );
@@ -488,7 +503,7 @@ export const SequencerProvider: React.FC<{ children: React.ReactNode }> = ({
       const maxOffset = state.events.notes.length - state.numEvents[target];
       const startIndex = Math.round(validOffset * maxOffset);
 
-      logger.log(`Window for ${target} now starts at index ${startIndex}`);
+      console.log(`Window for ${target} now starts at index ${startIndex}`);
 
       setState((prev) => ({
         ...prev,

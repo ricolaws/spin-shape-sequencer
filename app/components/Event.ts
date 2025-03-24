@@ -36,8 +36,6 @@ export class Event {
   }
 
   endTrigger(): void {
-    logger.log(`Event ${this.index} trigger ended.`);
-
     this.triggered = false;
     this.triggerOpacity = 0;
   }

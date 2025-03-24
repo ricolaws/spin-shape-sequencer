@@ -241,6 +241,8 @@ const RNBOShapeSequencer = ({
           // We don't need to sync to RNBO since the slider already did that
           setNumEventsRef.current(Math.round(value), "A");
 
+          logger.log("RNBOShapeSequencer: set num events: ", { value });
+
           // When numEvents changes, we need to ensure the window offset is still valid
           // If the window offset would cause events to go out of bounds, adjust it
           if (typeof setNoteWindowOffsetRef.current === "function") {

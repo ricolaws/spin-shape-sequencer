@@ -233,10 +233,6 @@ const SeqRing = forwardRef<RingRef, SeqRingProps>(
         if (index >= 0 && index < events.length) {
           if (events[index]) {
             const triggered = events[index].trigger();
-            logger.log(
-              `SeqRing: Triggered event ${index}, result: ${triggered}`
-            );
-
             // Force a small state update to trigger a re-render for animation
             if (triggered) {
               setEvents((prevEvents) => [...prevEvents]);
