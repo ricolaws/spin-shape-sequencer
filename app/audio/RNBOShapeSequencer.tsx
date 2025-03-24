@@ -2,9 +2,9 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { Parameter } from "./types";
 import { getOrCreateDevice } from "./RNBOCore";
-import VolumeControl from "../ui/VolumeControl";
-import ParameterSlider from "../ui/ParameterSlider";
-import { useSequencer } from "../../context/SequencerProvider";
+import VolumeControl from "../components/ui/VolumeControl";
+import ParameterSlider from "../components/ui/ParameterSlider";
+import { useSequencer } from "../context/SequencerProvider";
 import { logger } from "../utils/DebugLogger";
 
 interface Props {

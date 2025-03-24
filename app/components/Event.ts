@@ -1,5 +1,5 @@
-import { logger } from "./utils/DebugLogger";
-import { getNoteDisplay } from "./utils/sequencerUtils";
+import { logger } from "../utils/DebugLogger";
+import { getNoteDisplay } from "../utils/sequencerUtils";
 
 export class Event {
   index: number;

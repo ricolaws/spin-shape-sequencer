@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Scene from "./components/Scene";
-import RNBOShapeSequencer from "./components/audio/RNBOShapeSequencer";
+import RNBOShapeSequencer from "./audio/RNBOShapeSequencer";
 import { SequencerProvider } from "./context/SequencerProvider";
 import SeqEditor from "./components/ui/SeqEditor";
 

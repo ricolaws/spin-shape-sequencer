@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import StepCell from "./StepCell";
 import { useSequencer } from "../../context/SequencerProvider";
-import { logger } from "../utils/DebugLogger";
+import { logger } from "../../utils/DebugLogger";
 import SeqRangeControl from "./SeqRangeControl";
 import { colors } from "@/app/styles/colors";
 

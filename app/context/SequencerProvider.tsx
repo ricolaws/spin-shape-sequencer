@@ -10,7 +10,7 @@ import React, {
 
 import { MessageEvent, TimeNow } from "@rnbo/js";
 import { Event } from "../components/Event";
-import { logger } from "../components/utils/DebugLogger";
+import { logger } from "../utils/DebugLogger";
 
 // Define the trigger listener interface with target to specify polygon A or B
 interface TriggerListener {

@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useCallback, memo } from "react";
 import { useSequencer } from "../../context/SequencerProvider";
 import SeqRing, { RingRef } from "./SeqRing";
-import { logger } from "../utils/DebugLogger";
+import { logger } from "../../utils/DebugLogger";
 import { colors } from "../../../app/styles/colors";
 
 interface SeqRingWrapperProps {

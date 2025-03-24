@@ -1,5 +1,5 @@
 import React from "react";
-import { getNoteDisplay } from "../utils/sequencerUtils";
+import { getNoteDisplay } from "../../utils/sequencerUtils";
 
 interface NoteSlotProps {
   index: number;
