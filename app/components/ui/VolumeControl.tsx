@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { getMasterVolume, setMasterVolume } from "../audio/RNBOCore";
+import { getMasterVolume, setMasterVolume } from "../../audio/RNBOCore";
 
 const VolumeControl: React.FC = () => {
   const [volume, setVolume] = useState(getMasterVolume());

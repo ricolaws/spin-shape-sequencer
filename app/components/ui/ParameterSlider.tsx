@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Parameter } from "../audio/types";
+import { Parameter } from "../../audio/types";
 
 interface ParameterSliderProps {
   param: Parameter;

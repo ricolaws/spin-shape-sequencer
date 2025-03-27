@@ -4,15 +4,17 @@ import DynamicPolygon from "../components/ui/DynamicPolygon";
 import SeqRingWrapper from "../components/ui/SeqRingWrapper";
 import { Environment, OrbitControls } from "@react-three/drei";
 import { colors } from "../styles/colors";
+import { useSequencer } from "../context/SequencerProvider";
 
 interface SceneProps {
-  sidesA: number;
-  sidesB: number;
   angleOfRotation: number;
   className?: string;
 }
 
-const Scene: React.FC<SceneProps> = ({ sidesA, sidesB, angleOfRotation }) => {
+const Scene: React.FC<SceneProps> = ({ angleOfRotation }) => {
+  // Get polygon sides from context instead of props
+  const { state } = useSequencer();
+
   return (
     <div className="w-full min-h-[900px]">
       <Canvas camera={{ position: [0, 0, 5], fov: 60 }}>
@@ -24,7 +26,7 @@ const Scene: React.FC<SceneProps> = ({ sidesA, sidesB, angleOfRotation }) => {
 
         {/* Polygon A (outer) */}
         <DynamicPolygon
-          sides={sidesA}
+          sides={state.polygons.A.numCorners}
           outerRadius={2.4}
           innerRadius={2.1}
           color={colors.polygon}
@@ -34,7 +36,7 @@ const Scene: React.FC<SceneProps> = ({ sidesA, sidesB, angleOfRotation }) => {
 
         {/* Polygon B (inner) */}
         <DynamicPolygon
-          sides={sidesB}
+          sides={state.polygons.B.numCorners}
           outerRadius={1.6}
           innerRadius={1.3}
           position={[0, 0, 0.6]}
